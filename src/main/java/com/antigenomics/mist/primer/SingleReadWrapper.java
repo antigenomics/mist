@@ -19,6 +19,6 @@ public class SingleReadWrapper implements ReadWrapper {
     public NSequenceWithQuality getData(int index, boolean reverse) {
         if (index > 1 || index < 0)
             throw new IndexOutOfBoundsException("Allowed indexes for read wrapper are 0 and 1.");
-        return read.getRead(0).getData();
+        return reverse ? read.getRead(0).getData() : read.getRead(0).getData().getReverseComplement();
     }
 }
