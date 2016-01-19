@@ -8,7 +8,7 @@ public class PatternSearchResult {
     private final NSequenceWithQuality umi;
 
     public static final PatternSearchResult NOT_FOUND = new PatternSearchResult(-1, -1, new NSequenceWithQuality("", ""), (byte) -1),
-            NO_SEARCH = new PatternSearchResult(-1, -1);;
+            NO_SEARCH = new PatternSearchResult(-1, -1);
 
     public PatternSearchResult(int from, int to) {
         this(from, to, new NSequenceWithQuality("", ""));
