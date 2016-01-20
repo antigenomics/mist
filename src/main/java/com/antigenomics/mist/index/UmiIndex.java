@@ -1,7 +1,6 @@
 package com.antigenomics.mist.index;
 
 import com.antigenomics.mist.mig.Tag;
-import com.antigenomics.mist.mig.TagWithSampleId;
 import com.antigenomics.mist.primer.CompositePrimerSearcherResult;
 import com.milaboratory.core.sequence.NucleotideSequence;
 
@@ -22,7 +21,7 @@ public class UmiIndex {
         if (searcherResult.isMatched()) {
             add(searcherResult.getLeftResult().getUmi().getSequence(),
                     searcherResult.getRightResult().getUmi().getSequence(),
-                    searcherResult.getId(),
+                    searcherResult.getPrimerId(),
                     searcherResult.getReadWrapper().getRead().getId());
         }
     }

@@ -1,20 +1,22 @@
 package com.antigenomics.mist.primer;
 
+import com.antigenomics.mist.mig.Tag;
 import com.antigenomics.mist.primer.pattern.PatternSearchResult;
+import com.milaboratory.core.sequence.NucleotideSequence;
 
-public class CompositePrimerSearcherResult {
+public class CompositePrimerSearcherResult implements Tag {
     private final PatternSearchResult leftResult, rightResult;
-    private final String id;
-    private final ReadWrapper readWrapper;
+    private final String primerId;
+    private final long readId;
     private final boolean reversed;
 
     public CompositePrimerSearcherResult(PatternSearchResult leftResult, PatternSearchResult rightResult,
-                                         String id, ReadWrapper readWrapper, boolean reversed) {
+                                         String primerId, long readId, boolean reversed) {
         this.leftResult = leftResult;
         this.rightResult = rightResult;
         this.reversed = reversed;
-        this.id = id;
-        this.readWrapper = readWrapper;
+        this.primerId = primerId;
+        this.readId = readId;
     }
 
     public PatternSearchResult getLeftResult() {
@@ -37,11 +39,22 @@ public class CompositePrimerSearcherResult {
         return leftResult.getScore() < rightResult.getScore() ? leftResult.getScore() : rightResult.getScore();
     }
 
-    public String getId() {
-        return id;
+    @Override
+    public String getPrimerId() {
+        return primerId;
     }
 
-    public ReadWrapper getReadWrapper() {
-        return readWrapper;
+    @Override
+    public NucleotideSequence getLeftUmi() {
+        return leftResult.getUmi().getSequence();
+    }
+
+    @Override
+    public NucleotideSequence getRightUmi() {
+        return rightResult.getUmi().getSequence();
+    }
+
+    public long getReadId() {
+        return readId;
     }
 }
