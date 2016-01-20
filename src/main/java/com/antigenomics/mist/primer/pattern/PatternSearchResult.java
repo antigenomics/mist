@@ -7,11 +7,13 @@ public class PatternSearchResult {
     private final byte score;
     private final NSequenceWithQuality umi;
 
-    public static final PatternSearchResult NOT_FOUND = new PatternSearchResult(-1, -1, new NSequenceWithQuality("", ""), (byte) -1),
+    private static final NSequenceWithQuality EMPTY_NSQ = new NSequenceWithQuality("", "");
+
+    public static final PatternSearchResult NOT_FOUND = new PatternSearchResult(-1, -1, EMPTY_NSQ, (byte) -1),
             NO_SEARCH = new PatternSearchResult(-1, -1);
 
     public PatternSearchResult(int from, int to) {
-        this(from, to, new NSequenceWithQuality("", ""));
+        this(from, to, EMPTY_NSQ);
     }
 
     public PatternSearchResult(int from, int to, NSequenceWithQuality umi) {
