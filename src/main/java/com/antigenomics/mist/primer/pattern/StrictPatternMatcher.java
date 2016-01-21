@@ -58,14 +58,14 @@ public class StrictPatternMatcher implements PatternSearcher {
 
         int readAnchor = read.size() - pattern.size();
 
-        for (int offset = minOffset; offset < 0; offset++) {
+        for (int offset = -maxOffset; offset < 0; offset++) {
             patternSearchResult = search(read, readAnchor + offset, 0);
             if (patternSearchResult != PatternSearchResult.NOT_FOUND) {
                 return patternSearchResult;
             }
         }
 
-        for (int offset = 1; offset <= maxOffset; offset++) {
+        for (int offset = 1; offset <= -minOffset; offset++) {
             patternSearchResult = search(read, readAnchor + offset, 0);
             if (patternSearchResult != PatternSearchResult.NOT_FOUND) {
                 return patternSearchResult;
