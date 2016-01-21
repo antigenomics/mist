@@ -1,6 +1,7 @@
 package com.antigenomics.mist.primer;
 
 import com.antigenomics.mist.preprocess.ReadWrapper;
+import com.antigenomics.mist.primer.pattern.DummyPatternSearcher;
 import com.antigenomics.mist.primer.pattern.PatternSearchResult;
 import com.antigenomics.mist.primer.pattern.PatternSearcher;
 
@@ -17,6 +18,11 @@ public class PrimerSearcher {
         this.patternSearcherLeft = patternSearcherLeft;
         this.patternSearcherRight = patternSearcherRight;
         this.reverseAllowed = reverseAllowed;
+        
+        if (patternSearcherLeft instanceof DummyPatternSearcher &&
+                patternSearcherRight instanceof DummyPatternSearcher) {
+            throw new IllegalArgumentException("Both left and right pattern searchers set to dummy.");
+        }
     }
 
     public PrimerSearcherResult search(ReadWrapper readWrapper) {

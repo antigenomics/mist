@@ -40,7 +40,6 @@ public class Speaker {
         );
     }
 
-
     private Speaker() {
 
     }

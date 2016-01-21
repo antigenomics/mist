@@ -1,11 +1,9 @@
 package com.antigenomics.mist.primer;
 
-import com.antigenomics.mist.mig.Tag;
 import com.antigenomics.mist.preprocess.ReadWrapper;
 import com.antigenomics.mist.primer.pattern.PatternSearchResult;
-import com.milaboratory.core.sequence.NucleotideSequence;
 
-public class PrimerSearcherResult implements Tag {
+public class PrimerSearcherResult {
     private final PatternSearchResult leftResult, rightResult;
     private final String primerId;
     private final ReadWrapper readWrapper;
@@ -40,19 +38,8 @@ public class PrimerSearcherResult implements Tag {
         return leftResult.getScore() < rightResult.getScore() ? leftResult.getScore() : rightResult.getScore();
     }
 
-    @Override
     public String getPrimerId() {
         return primerId;
-    }
-
-    @Override
-    public NucleotideSequence getLeftUmi() {
-        return leftResult.getUmi().getSequence();
-    }
-
-    @Override
-    public NucleotideSequence getRightUmi() {
-        return rightResult.getUmi().getSequence();
     }
 
     public ReadWrapper getReadWrapper() {
