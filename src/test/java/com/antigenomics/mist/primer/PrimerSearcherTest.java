@@ -15,8 +15,102 @@
 
 package com.antigenomics.mist.primer;
 
-/**
- * Created by mikesh on 1/21/16.
- */
+import com.antigenomics.mist.preprocess.ReadWrapperFactory;
+import com.antigenomics.mist.primer.pattern.FuzzyPatternSearcher;
+import com.milaboratory.core.io.sequence.PairedRead;
+import com.milaboratory.core.io.sequence.SingleReadImpl;
+import com.milaboratory.core.sequence.NSequenceWithQuality;
+import org.junit.Assert;
+import org.junit.Test;
+
 public class PrimerSearcherTest {
+    private final NSequenceWithQuality read1 = new NSequenceWithQuality(
+            /*
+             0000000000111111111122222222223333333333444444444455555555556666
+             0123456789012345678901234567890123456789012345678901234567890123 */
+            "AGTCGAAAAATCGTAGCTAGGGCGCTAGTCGATCACCGCGGGGAAAACTGCTTTCAGATCGACT",
+            "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII"
+    ), read2 = new NSequenceWithQuality(
+            /*
+             0000000000111111111122222222223333333333444444444455555555556666
+             0123456789012345678901234567890123456789012345678901234567890123 */
+            "ACGATCGACTGACTAGACTGCTACGCCAAAATGCAAGGGATGCCGCATTGCATATAAGCTATAT",
+            "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII"
+    ).getReverseComplement();
+
+    @Test
+    public void singleReadTestForward() {
+        FuzzyPatternSearcher fpsLeft = new FuzzyPatternSearcher("GTCGAAAAATNNNNNN", 0),
+                fpsRight = new FuzzyPatternSearcher("NNNNNNCTTTCAGATC", 0);
+
+        PrimerSearcher primerSearcher = new PrimerSearcher("dummy", fpsLeft, fpsRight, true);
+
+        ReadWrapperFactory readWrapperFactory = new ReadWrapperFactory(true);
+
+        PrimerSearcherResult result = primerSearcher.search(readWrapperFactory.wrap(
+                new SingleReadImpl(0, read1, "")));
+
+        Assert.assertTrue(result.isMatched());
+        Assert.assertTrue(!result.isReversed());
+        Assert.assertEquals("CGTAGC", result.getLeftResult().getUmi().getSequence().toString());
+        Assert.assertEquals("AAACTG", result.getRightResult().getUmi().getSequence().toString());
+    }
+
+    @Test
+    public void singleReadTestReverse() {
+        FuzzyPatternSearcher fpsLeft = new FuzzyPatternSearcher("GTCGAAAAATNNNNNN", 0),
+                fpsRight = new FuzzyPatternSearcher("NNNNNNCTTTCAGATC", 0);
+
+        PrimerSearcher primerSearcher = new PrimerSearcher("dummy", fpsLeft, fpsRight, true);
+
+        ReadWrapperFactory readWrapperFactory = new ReadWrapperFactory(true);
+
+        PrimerSearcherResult result = primerSearcher.search(readWrapperFactory.wrap(
+                new SingleReadImpl(0, read1.getReverseComplement(), "")));
+
+        Assert.assertTrue(result.isMatched());
+        Assert.assertTrue(result.isReversed());
+        Assert.assertEquals("CGTAGC", result.getLeftResult().getUmi().getSequence().toString());
+        Assert.assertEquals("AAACTG", result.getRightResult().getUmi().getSequence().toString());
+    }
+
+    @Test
+    public void pairedReadTestForward() {
+        FuzzyPatternSearcher fpsLeft = new FuzzyPatternSearcher("GTCGAAAAATNNNNNN", 0),
+                fpsRight = new FuzzyPatternSearcher("NNNNNNTATAAGCTA", 0);
+
+        PrimerSearcher primerSearcher = new PrimerSearcher("dummy", fpsLeft, fpsRight, true);
+
+        ReadWrapperFactory readWrapperFactory = new ReadWrapperFactory(true);
+
+        PrimerSearcherResult result = primerSearcher.search(readWrapperFactory.wrap(
+                new PairedRead(new SingleReadImpl(0, read1, ""),
+                        new SingleReadImpl(0, read2, ""))
+        ));
+
+        Assert.assertTrue(result.isMatched());
+        Assert.assertTrue(!result.isReversed());
+        Assert.assertEquals("CGTAGC", result.getLeftResult().getUmi().getSequence().toString());
+        Assert.assertEquals("ATTGCA", result.getRightResult().getUmi().getSequence().toString());
+    }
+
+    @Test
+    public void pairedReadTestReverse() {
+        FuzzyPatternSearcher fpsLeft = new FuzzyPatternSearcher("GTCGAAAAATNNNNNN", 0),
+                fpsRight = new FuzzyPatternSearcher("NNNNNNTATAAGCTA", 0);
+
+        PrimerSearcher primerSearcher = new PrimerSearcher("dummy", fpsLeft, fpsRight, true);
+
+        ReadWrapperFactory readWrapperFactory = new ReadWrapperFactory(true);
+        
+        PrimerSearcherResult result = primerSearcher.search(readWrapperFactory.wrap(
+                new PairedRead(new SingleReadImpl(0, read2, ""),
+                        new SingleReadImpl(0, read1, ""))
+        ));
+
+        Assert.assertTrue(result.isMatched());
+        Assert.assertTrue(result.isReversed());
+        Assert.assertEquals("CGTAGC", result.getLeftResult().getUmi().getSequence().toString());
+        Assert.assertEquals("ATTGCA", result.getRightResult().getUmi().getSequence().toString());
+    }
 }

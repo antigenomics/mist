@@ -156,7 +156,7 @@ public class PatternSearcherTests {
     }
 
     @Test
-    public void FuzzyPatternSearcherTest() {
+    public void fuzzyPatternSearcherTest() {
         NSequenceWithQuality nsq = new NSequenceWithQuality(
                 /*    0000000000111111111122222222223333333333444444
                       0123456789012345678901234567890123456789012345
@@ -177,7 +177,7 @@ public class PatternSearcherTests {
     }
 
     @Test
-    public void FuzzyPatternSearcherTestBorderCases() {
+    public void fuzzyPatternSearcherTestBorderCases() {
         NSequenceWithQuality nsq = new NSequenceWithQuality(
                 /*    0000000000111111111122222222223333333333444444
                       0123456789012345678901234567890123456789012345
@@ -208,7 +208,7 @@ public class PatternSearcherTests {
     }
 
     @Test
-    public void FuzzyPatternSearcherTestUMI() {
+    public void fuzzyPatternSearcherTestUmi() {
         NSequenceWithQuality nsq = new NSequenceWithQuality(
                 /*    0000000000111111111122222222223333333333444444
                       0123456789012345678901234567890123456789012345
@@ -223,5 +223,33 @@ public class PatternSearcherTests {
         Assert.assertEquals(18, result.getFrom());
         Assert.assertEquals(32, result.getTo());
         Assert.assertEquals("GATTA", result.getUmi().getSequence().toString());
+    }
+
+    @Test
+    public void positionalUmiExtractorTest() {
+        NSequenceWithQuality nsq = new NSequenceWithQuality(
+                /*    0000000000111111111122222222223333333333444444444455555555
+                      0123456789012345678901234567890123456789012345678901234567
+                      
+                      5555555544444444443333333333222222222211111111110000000000
+                      7654321098765432109876543210987654321098765432109876543210                                                         
+                  */ "ACTCGACAGTCGAAAATCGAAATCCACGATCCGATTGGGATAAATGCATCACATCCCC",
+                /**/ "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII");
+
+        PositionalUmiExtractor positionalUmiExtractor = new PositionalUmiExtractor(1, 5);
+
+        PatternSearchResult result = positionalUmiExtractor.searchFirst(nsq);
+
+        Assert.assertTrue(result.isMatching());
+        Assert.assertEquals(1, result.getFrom());
+        Assert.assertEquals(5, result.getTo());
+        Assert.assertEquals("CTCG", result.getUmi().getSequence().toString());
+
+        result = positionalUmiExtractor.searchLast(nsq);
+
+        Assert.assertTrue(result.isMatching());
+        Assert.assertEquals(53, result.getFrom());
+        Assert.assertEquals(57, result.getTo());
+        Assert.assertEquals("TCCC", result.getUmi().getSequence().toString());
     }
 }

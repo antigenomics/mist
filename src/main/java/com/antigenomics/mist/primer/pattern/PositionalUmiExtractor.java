@@ -27,7 +27,7 @@ public class PositionalUmiExtractor implements PatternSearcher {
 
     @Override
     public PatternSearchResult searchFirst(NSequenceWithQuality read) {
-        return search(read, to, from);
+        return search(read, from, to);
     }
 
     @Override

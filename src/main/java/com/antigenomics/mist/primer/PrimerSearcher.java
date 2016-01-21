@@ -33,7 +33,7 @@ public class PrimerSearcher {
         this.patternSearcherLeft = patternSearcherLeft;
         this.patternSearcherRight = patternSearcherRight;
         this.reverseAllowed = reverseAllowed;
-        
+
         if (patternSearcherLeft instanceof DummyPatternSearcher &&
                 patternSearcherRight instanceof DummyPatternSearcher) {
             throw new IllegalArgumentException("Both left and right pattern searchers set to dummy.");
@@ -47,7 +47,9 @@ public class PrimerSearcher {
         if (reverseAllowed && (!leftResult.isMatching() || !rightResult.isMatching())) {
             leftResult = patternSearcherLeft.searchFirst(readWrapper.getData(0, true));
             rightResult = patternSearcherRight.searchLast(readWrapper.getData(1, true));
-            return new PrimerSearcherResult(leftResult, rightResult, primerId, readWrapper, true);
+            if (leftResult.isMatching() && rightResult.isMatching()) {
+                return new PrimerSearcherResult(leftResult, rightResult, primerId, readWrapper, true);
+            }
         }
 
         return new PrimerSearcherResult(leftResult, rightResult, primerId, readWrapper, false);

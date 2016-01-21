@@ -42,9 +42,10 @@ public class ReadGroomer implements Processor<PrimerSearcherResult, SequenceRead
         if (readWrapper.getRead().numberOfReads() == 1) {
             NSequenceWithQuality data = readWrapper.getData(0, primerSearcherResult.isReversed());
 
-            if (trim) {
-                from = from < 0 ? 0 : from;
-                to = to < 0 ? data.size() : to;
+            from = from < 0 ? 0 : from;
+            to = to < 0 ? data.size() : to;
+            
+            if (trim && from < to) { // Need to protect from primer overlap here. By default no trimming for such case.
                 return new SingleReadImpl(id, data.getRange(from, to),
                         readWrapper.getRead().getRead(0).getDescription() + description);
             } else {
