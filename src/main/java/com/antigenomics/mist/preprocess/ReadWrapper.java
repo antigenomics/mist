@@ -1,4 +1,4 @@
-package com.antigenomics.mist.primer;
+package com.antigenomics.mist.preprocess;
 
 import com.milaboratory.core.io.sequence.SequenceRead;
 import com.milaboratory.core.sequence.NSequenceWithQuality;

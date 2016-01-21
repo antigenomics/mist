@@ -1,22 +1,23 @@
 package com.antigenomics.mist.primer;
 
 import com.antigenomics.mist.mig.Tag;
+import com.antigenomics.mist.preprocess.ReadWrapper;
 import com.antigenomics.mist.primer.pattern.PatternSearchResult;
 import com.milaboratory.core.sequence.NucleotideSequence;
 
-public class CompositePrimerSearcherResult implements Tag {
+public class PrimerSearcherResult implements Tag {
     private final PatternSearchResult leftResult, rightResult;
     private final String primerId;
-    private final long readId;
+    private final ReadWrapper readWrapper;
     private final boolean reversed;
 
-    public CompositePrimerSearcherResult(PatternSearchResult leftResult, PatternSearchResult rightResult,
-                                         String primerId, long readId, boolean reversed) {
+    public PrimerSearcherResult(PatternSearchResult leftResult, PatternSearchResult rightResult,
+                                String primerId, ReadWrapper readWrapper, boolean reversed) {
         this.leftResult = leftResult;
         this.rightResult = rightResult;
         this.reversed = reversed;
         this.primerId = primerId;
-        this.readId = readId;
+        this.readWrapper = readWrapper;
     }
 
     public PatternSearchResult getLeftResult() {
@@ -54,7 +55,7 @@ public class CompositePrimerSearcherResult implements Tag {
         return rightResult.getUmi().getSequence();
     }
 
-    public long getReadId() {
-        return readId;
+    public ReadWrapper getReadWrapper() {
+        return readWrapper;
     }
 }

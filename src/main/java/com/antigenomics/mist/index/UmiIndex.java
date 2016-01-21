@@ -1,7 +1,7 @@
 package com.antigenomics.mist.index;
 
 import com.antigenomics.mist.mig.Tag;
-import com.antigenomics.mist.primer.CompositePrimerSearcherResult;
+import com.antigenomics.mist.primer.PrimerSearcherResult;
 import com.milaboratory.core.sequence.NucleotideSequence;
 
 import java.util.ArrayList;
@@ -17,7 +17,7 @@ public class UmiIndex {
         this.ignoreSampleIds = ignoreSampleIds;
     }
 
-    public void add(CompositePrimerSearcherResult searcherResult) {
+    public void add(PrimerSearcherResult searcherResult) {
         if (searcherResult.isMatched()) {
             add(searcherResult.getLeftResult().getUmi().getSequence(),
                     searcherResult.getRightResult().getUmi().getSequence(),

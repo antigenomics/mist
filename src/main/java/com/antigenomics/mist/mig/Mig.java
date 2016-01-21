@@ -16,4 +16,8 @@ public class Mig {
     public Tag getTag() {
         return tag;
     }
+
+    public List<SequenceRead> getReads() {
+        return reads;
+    }
 }

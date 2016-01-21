@@ -1,7 +1,7 @@
 package com.antigenomics.mist.io;
 
 import cc.redberry.pipe.OutputPort;
-import com.antigenomics.mist.primer.CompositePrimerSearcherResult;
+import com.antigenomics.mist.primer.PrimerSearcherResult;
 import com.antigenomics.mist.primer.pattern.PatternSearchResult;
 import com.milaboratory.core.sequence.NSequenceWithQuality;
 
@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
-public class PrimerSearchResultReader implements OutputPort<CompositePrimerSearcherResult> {
+public class PrimerSearchResultReader implements OutputPort<PrimerSearcherResult> {
     private final BufferedReader reader;
 
     public PrimerSearchResultReader(InputStream is) {
@@ -27,7 +27,7 @@ public class PrimerSearchResultReader implements OutputPort<CompositePrimerSearc
     }
 
     @Override
-    public CompositePrimerSearcherResult take() {
+    public PrimerSearcherResult take() {
         String line;
         try {
             line = reader.readLine();
@@ -57,7 +57,7 @@ public class PrimerSearchResultReader implements OutputPort<CompositePrimerSearc
         12 right_primer_to
          */
 
-        return new CompositePrimerSearcherResult(
+        return new PrimerSearcherResult(
                 new PatternSearchResult(
                         Integer.parseInt(splitLine[7]), Integer.parseInt(splitLine[8]),
                         new NSequenceWithQuality(splitLine[2], splitLine[6]),
@@ -66,7 +66,8 @@ public class PrimerSearchResultReader implements OutputPort<CompositePrimerSearc
                         Integer.parseInt(splitLine[11]), Integer.parseInt(splitLine[12]),
                         new NSequenceWithQuality(splitLine[3], splitLine[10]),
                         Byte.parseByte(splitLine[9])),
-                splitLine[1], Long.parseLong(splitLine[0]), Boolean.parseBoolean(splitLine[4])
+                splitLine[1], Long.parseLong(splitLine[0]), 
+                Boolean.parseBoolean(splitLine[4])
         );
     }
 }
