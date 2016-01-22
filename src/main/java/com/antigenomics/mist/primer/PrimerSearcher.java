@@ -44,14 +44,38 @@ public class PrimerSearcher {
         PatternSearchResult leftResult = patternSearcherLeft.searchFirst(readWrapper.getData(0, false)),
                 rightResult = patternSearcherRight.searchLast(readWrapper.getData(1, false));
 
-        if (reverseAllowed && (!leftResult.isMatching() || !rightResult.isMatching())) {
+        boolean someMatchForForward = leftResult.isMatching() || rightResult.isMatching(),
+                fullMatchForward = leftResult.isMatching() && rightResult.isMatching();
+
+        if (reverseAllowed && !fullMatchForward) {
             leftResult = patternSearcherLeft.searchFirst(readWrapper.getData(0, true));
             rightResult = patternSearcherRight.searchLast(readWrapper.getData(1, true));
-            if (leftResult.isMatching() && rightResult.isMatching()) {
+            
+            // Only report reverse match if it is better than forward one
+            
+            if (someMatchForForward ?
+                    leftResult.isMatching() && rightResult.isMatching() :
+                    leftResult.isMatching() || rightResult.isMatching()) {
                 return new PrimerSearcherResult(leftResult, rightResult, primerId, readWrapper, true);
             }
         }
 
         return new PrimerSearcherResult(leftResult, rightResult, primerId, readWrapper, false);
+    }
+
+    public String getPrimerId() {
+        return primerId;
+    }
+
+    public PatternSearcher getPatternSearcherLeft() {
+        return patternSearcherLeft;
+    }
+
+    public PatternSearcher getPatternSearcherRight() {
+        return patternSearcherRight;
+    }
+
+    public boolean isReverseAllowed() {
+        return reverseAllowed;
     }
 }

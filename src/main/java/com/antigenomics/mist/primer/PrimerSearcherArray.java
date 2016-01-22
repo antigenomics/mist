@@ -17,30 +17,91 @@ package com.antigenomics.mist.primer;
 
 import com.antigenomics.mist.preprocess.ReadWrapper;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLongArray;
 
 public class PrimerSearcherArray {
     private final List<PrimerSearcher> primerSearchers;
+    private final AtomicLongArray leftMatchCounter, rightMatchCounter,
+            bothMatchCounter, partialMatchCounter, reverseCounter;
 
     public PrimerSearcherArray(List<PrimerSearcher> primerSearchers) {
         this.primerSearchers = primerSearchers;
+        this.leftMatchCounter = new AtomicLongArray(primerSearchers.size());
+        this.rightMatchCounter = new AtomicLongArray(primerSearchers.size());
+        this.bothMatchCounter = new AtomicLongArray(primerSearchers.size());
+        this.partialMatchCounter = new AtomicLongArray(primerSearchers.size());
+        this.reverseCounter = new AtomicLongArray(primerSearchers.size());
 
         if (primerSearchers.isEmpty()) {
             throw new IllegalArgumentException("Composite primer searcher list should be non-empty.");
         }
     }
 
-    public PrimerSearcherResult search(ReadWrapper readWrapper) {
-        PrimerSearcherResult bestResult = null;
-        for (PrimerSearcher primerSearcher : primerSearchers) {
-            PrimerSearcherResult result = primerSearcher.search(readWrapper);
+    private void updateStats(int index, PrimerSearcherResult result) {
+        boolean leftMatch = result.getLeftResult().isMatching(),
+                rightMatch = result.getRightResult().isMatching();
+        if (leftMatch || rightMatch) {
+            if (leftMatch) {
+                leftMatchCounter.incrementAndGet(index);
+            }
 
-            if (result.getScore() == Byte.MAX_VALUE) {
-                return result;
-            } else if (bestResult == null || bestResult.getScore() < result.getScore()) {
-                bestResult = result;
+            if (rightMatch) {
+                rightMatchCounter.incrementAndGet(index);
+            }
+
+            if (leftMatch && rightMatch) {
+                bothMatchCounter.incrementAndGet(index);
+                if (result.isReversed()) {
+                    reverseCounter.incrementAndGet(index);
+                }
+            } else {
+                partialMatchCounter.incrementAndGet(index);
             }
         }
+    }
+
+    public List<PrimerSearcherStats> getStats() {
+        List<PrimerSearcherStats> primerSearcherStatsList = new ArrayList<>();
+
+        for (int i = 0; i < primerSearchers.size(); i++) {
+            primerSearcherStatsList.add(new PrimerSearcherStats(
+                    leftMatchCounter.get(i),
+                    rightMatchCounter.get(i),
+                    bothMatchCounter.get(i),
+                    partialMatchCounter.get(i),
+                    reverseCounter.get(i),
+                    primerSearchers.get(i).getPrimerId()
+            ));
+        }
+
+        return primerSearcherStatsList;
+    }
+
+    public PrimerSearcherResult search(ReadWrapper readWrapper) {
+        PrimerSearcherResult bestResult = null;
+        int bestResultIndex = -1;
+
+        for (int i = 0; i < primerSearchers.size(); i++) {
+            PrimerSearcher primerSearcher = primerSearchers.get(i);
+            PrimerSearcherResult result = primerSearcher.search(readWrapper);
+
+            if (bestResult == null ||
+                    (bestResult.getLeftResult().getScore() <= result.getLeftResult().getScore() &&
+                            bestResult.getRightResult().getScore() <= result.getRightResult().getScore())) {
+                bestResult = result;
+                bestResultIndex = i;
+            }
+
+            if (bestResult.getScore() == Byte.MAX_VALUE) {
+                bestResultIndex = i;
+                break;
+            }
+        }
+
+        updateStats(bestResultIndex, bestResult);
+
         return bestResult;
     }
 }
