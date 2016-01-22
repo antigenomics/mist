@@ -16,12 +16,13 @@
 package com.antigenomics.mist.preprocess;
 
 import com.milaboratory.core.io.sequence.SequenceRead;
+import com.milaboratory.core.io.sequence.SingleRead;
 import com.milaboratory.core.sequence.NSequenceWithQuality;
 
 public class SingleReadWrapper implements ReadWrapper {
-    private final SequenceRead read;
+    private final SingleRead read;
 
-    public SingleReadWrapper(SequenceRead read) {
+    public SingleReadWrapper(SingleRead read) {
         this.read = read;
     }
 
@@ -34,6 +35,6 @@ public class SingleReadWrapper implements ReadWrapper {
     public NSequenceWithQuality getData(int index, boolean reverse) {
         if (index > 1 || index < 0)
             throw new IndexOutOfBoundsException("Allowed indexes for read wrapper are 0 and 1.");
-        return reverse ? read.getRead(0).getData().getReverseComplement() : read.getRead(0).getData();
+        return reverse ? read.getData().getReverseComplement() : read.getData();
     }
 }

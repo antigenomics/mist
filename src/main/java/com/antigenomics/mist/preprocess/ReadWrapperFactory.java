@@ -15,7 +15,9 @@
 
 package com.antigenomics.mist.preprocess;
 
+import com.milaboratory.core.io.sequence.PairedRead;
 import com.milaboratory.core.io.sequence.SequenceRead;
+import com.milaboratory.core.io.sequence.SingleRead;
 
 public class ReadWrapperFactory {
     private final boolean illuminaReads;
@@ -26,9 +28,11 @@ public class ReadWrapperFactory {
 
     public ReadWrapper wrap(SequenceRead read) {
         if (read.numberOfReads() == 1) {
-            return new SingleReadWrapper(read);
+            SingleRead singleRead = ReadUtil.removeNs((SingleRead) read);
+            return new SingleReadWrapper(singleRead);
         } else {
-            return illuminaReads ? new PairedIlluminaReadWrapper(read) : new PairedReadWrapper(read);
+            PairedRead pairedRead = ReadUtil.removeNs((PairedRead) read);
+            return illuminaReads ? new PairedIlluminaReadWrapper(pairedRead) : new PairedReadWrapper(pairedRead);
         }
     }
 }

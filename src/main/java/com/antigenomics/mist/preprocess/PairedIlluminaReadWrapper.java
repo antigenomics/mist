@@ -15,17 +15,18 @@
 
 package com.antigenomics.mist.preprocess;
 
+import com.milaboratory.core.io.sequence.PairedRead;
 import com.milaboratory.core.io.sequence.SequenceRead;
 import com.milaboratory.core.sequence.NSequenceWithQuality;
 
 public class PairedIlluminaReadWrapper implements ReadWrapper {
-    private final SequenceRead read;
+    private final PairedRead read;
     private NSequenceWithQuality[] cache = new NSequenceWithQuality[4];
 
-    public PairedIlluminaReadWrapper(SequenceRead read) {
+    public PairedIlluminaReadWrapper(PairedRead read) {
         this.read = read;
-        cache[0] = read.getRead(0).getData();
-        cache[1] = read.getRead(1).getData().getReverseComplement();
+        cache[0] = read.getR1().getData();
+        cache[1] = read.getR2().getData().getReverseComplement();
     }
 
     @Override
@@ -36,8 +37,8 @@ public class PairedIlluminaReadWrapper implements ReadWrapper {
     @Override
     public NSequenceWithQuality getData(int index, boolean reversed) {
         if (reversed && cache[2] == null) {
-            cache[2] = read.getRead(1).getData();
-            cache[3] = read.getRead(0).getData().getReverseComplement();
+            cache[2] = read.getR2().getData();
+            cache[3] = read.getR1().getData().getReverseComplement();
         }
         return cache[reversed ? 2 + index : index];
     }
