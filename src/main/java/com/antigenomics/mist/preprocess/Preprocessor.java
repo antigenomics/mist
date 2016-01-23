@@ -22,6 +22,7 @@ import cc.redberry.pipe.blocks.ParallelProcessor;
 import cc.redberry.pipe.util.CountingOutputPort;
 import com.antigenomics.mist.misc.Speaker;
 import com.antigenomics.mist.primer.PrimerSearcherResult;
+import com.antigenomics.mist.umi.UmiSetInfo;
 import com.milaboratory.core.io.sequence.SequenceRead;
 import com.milaboratory.core.io.sequence.SequenceReader;
 import com.milaboratory.core.io.sequence.SequenceWriter;
