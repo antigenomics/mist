@@ -2,6 +2,8 @@ package com.antigenomics.mist.misc;
 
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.distribution.PoissonDistribution;
+import org.apache.commons.math3.random.Well19937c;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Random;
@@ -12,29 +14,32 @@ public class PoissonLogNormalEMTest {
     @Test
     public void mixtureTest() {
         double lambdaExpected = 0.3, muExpected = 4.0, sigmaExpected = 0.5,
-                gaussianRatio = 0.7;
+                logNormalRatio = 0.7;
 
-        NormalDistribution gaussianDistr = new NormalDistribution(muExpected, sigmaExpected);
-        PoissonDistribution poissonDistr = new PoissonDistribution(lambdaExpected);
+        int expectedThreshold = 5;
+
+        NormalDistribution gaussianDistr = new NormalDistribution(new Well19937c(51102),
+                muExpected, sigmaExpected);
+        PoissonDistribution poissonDistr = new PoissonDistribution(new Well19937c(51102),
+                lambdaExpected, PoissonDistribution.DEFAULT_EPSILON, PoissonDistribution.DEFAULT_MAX_ITERATIONS);
         PoissonLogNormalEM model = new PoissonLogNormalEM();
 
-        int n = 1000;
+        int n = 10000;
 
         for (int i = 0; i < n; i++) {
-            int x = rnd.nextDouble() < gaussianRatio ?
+            int x = rnd.nextDouble() < logNormalRatio ?
                     (int) Math.pow(2.0, gaussianDistr.sample()) :
                     poissonDistr.sample();
 
-            if (x > 0) {  // in case we sample 0
+            if (x > 0)
                 model.update(x);
-            }
         }
 
-        model.run(5);
+        model.run(expectedThreshold);
 
-        System.out.println(model.getLambda());
-        System.out.println(model.getMu());
-        System.out.println(model.getSigma());
-        System.out.println(model.getGaussianRatio());
+        Assert.assertTrue(Math.abs(model.getLambda() - lambdaExpected) < 0.05);
+        Assert.assertTrue(Math.abs(model.getMu() - muExpected) < 0.2);
+        Assert.assertTrue(Math.abs(model.getSigma() - sigmaExpected) < 0.05);
+        Assert.assertTrue(Math.abs(model.getLogNormalRatio() - logNormalRatio) < 0.05);
     }
 }
