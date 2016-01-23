@@ -45,8 +45,11 @@ public class SearchProcessor implements Processor<SequenceRead, PrimerSearcherRe
         if (result.isMatched()) {
             matchedReadsCounter.incrementAndGet();
 
-            if (result.getLeftResult().getUmi().size() + result.getRightResult().getUmi().size() > 0) {
-                umiSetInfo.update(result.getLeftResult().getUmi(), result.getRightResult().getUmi());
+            if (result.getLeftResult().getUmi().size() +
+                    result.getRightResult().getUmi().size() > 0) {
+                umiSetInfo.update(result.getPrimerId(),
+                        result.getLeftResult().getUmi(),
+                        result.getRightResult().getUmi());
             }
 
             if (result.isReversed()) {

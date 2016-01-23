@@ -39,6 +39,5 @@ public class HeaderUtil {
                         RIGHT_UMI_TOKEN + rightResult.getUmi().getSequence().toString() +
                                 FIELD_SEP + rightResult.getUmi().getQuality().toString() : "") +
                 TOKEN_SEP;
-
     }
 }

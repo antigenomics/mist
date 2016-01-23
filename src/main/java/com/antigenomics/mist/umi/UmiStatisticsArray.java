@@ -15,5 +15,5 @@
 
 package com.antigenomics.mist.umi;
 
-public class UmiStatistics {
+public class UmiStatisticsArray {
 }
