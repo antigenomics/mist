@@ -1,7 +1,5 @@
 package com.antigenomics.mist.umi;
 
-import com.antigenomics.mist.misc.PoissonLogNormalEM;
-
 // non thread-safe
 public class UmiStatisticsBySample {
     private final long[] weightedHistogram;
@@ -24,5 +22,19 @@ public class UmiStatisticsBySample {
 
         weightedHistogram[bin] += umiInfo.getCount();
         histogram[bin]++;
+    }
+
+    public int estimateThreshold() {
+        int indexOfMax = -1;
+        long maxValue = -1;
+
+        for (int i = 0; i < numberOfBins; i++) {
+            if (weightedHistogram[i] > maxValue) {
+                indexOfMax = i;
+                maxValue = weightedHistogram[i];
+            }
+        }
+
+        return (int) Math.pow(2, indexOfMax);
     }
 }
