@@ -59,7 +59,7 @@ public class UmiCoverageStatistics {
         return histogram[bin(umiCoverage)];
     }
 
-    public double getWeighted(int umiCoverage) {
+    public double getWeightedDensity(int umiCoverage) {
         return getWeightedCount(umiCoverage) / total;
     }
 

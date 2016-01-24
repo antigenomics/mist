@@ -192,6 +192,5 @@ public class PoissonLogNormalEM {
         public double getLogNormalRatio() {
             return logNormalPrior;
         }
-
     }
 }

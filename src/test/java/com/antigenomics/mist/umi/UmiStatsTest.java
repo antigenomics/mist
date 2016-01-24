@@ -57,8 +57,16 @@ public class UmiStatsTest {
 
         UmiCoverageStatistics coverageStats = umiStatistics.getUmiCoverageStatistics(primerSearcherArray.getSampleIds().get(0));
 
+        System.out.println("threshold=" + coverageStats.getThresholdEstimate());
+
         PoissonLogNormalEM.PoissonLogNormalModel densityModel = coverageStats.getWeightedDensityModel();
 
-        System.out.println("zzz");
+        for (int i = 0; i < 16; i++) {
+            int x = (int) Math.pow(2, i);
+            System.out.println(x + "\t" +
+                    coverageStats.getDensity(x) + "\t" + coverageStats.getWeightedDensity(x) + "\t" +
+                    densityModel.computeDensity(x)
+            );
+        }
     }
 }
