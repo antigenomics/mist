@@ -20,14 +20,12 @@ import com.milaboratory.core.sequence.SequenceQuality;
 public class UmiCoverageAndQuality {
     private final UmiTag umiTag;
     private final int coverage;
-    private final SequenceQuality averageQualityLeft, averageQualityRight;
+    private final SequenceQuality quality;
 
-    public UmiCoverageAndQuality(UmiTag umiTag, int coverage,
-                                 SequenceQuality averageQualityLeft, SequenceQuality averageQualityRight) {
+    public UmiCoverageAndQuality(UmiTag umiTag, int coverage, SequenceQuality quality) {
         this.umiTag = umiTag;
         this.coverage = coverage;
-        this.averageQualityLeft = averageQualityLeft;
-        this.averageQualityRight = averageQualityRight;
+        this.quality = quality;
     }
 
     public UmiTag getUmiTag() {
@@ -38,11 +36,7 @@ public class UmiCoverageAndQuality {
         return coverage;
     }
 
-    public SequenceQuality getAverageQualityLeft() {
-        return averageQualityLeft;
-    }
-
-    public SequenceQuality getAverageQualityRight() {
-        return averageQualityRight;
+    public SequenceQuality getQuality() {
+        return quality;
     }
 }

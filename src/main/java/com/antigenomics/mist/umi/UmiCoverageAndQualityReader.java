@@ -47,13 +47,9 @@ public class UmiCoverageAndQualityReader implements OutputPort<UmiCoverageAndQua
         String[] splitLine = line.split("\t");
 
         return new UmiCoverageAndQuality(
-                new UmiTag(
-                        splitLine[0],
-                        new NucleotideSequence(splitLine[1]),
-                        new NucleotideSequence(splitLine[2])
-                ),
-                Integer.parseInt(splitLine[3]),
-                new SequenceQuality(splitLine[4]),
-                new SequenceQuality(splitLine[5]));
+                new UmiTag(splitLine[0], new NucleotideSequence(splitLine[1])),
+                Integer.parseInt(splitLine[2]),
+                new SequenceQuality(splitLine[3])
+        );
     }
 }

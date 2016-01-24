@@ -15,8 +15,26 @@
 
 package com.antigenomics.mist.umi;
 
-/**
- * Created by mikesh on 1/23/16.
- */
+import com.milaboratory.core.sequence.NucleotideSequence;
+import com.milaboratory.core.tree.SequenceTreeMap;
+import com.milaboratory.core.tree.TreeSearchParameters;
+
 public class UmiTree {
+    private final SequenceTreeMap<NucleotideSequence, UmiCoverageAndQuality> umiTree =
+            new SequenceTreeMap<>(NucleotideSequence.ALPHABET);
+    private final TreeSearchParameters treeSearchParameters;
+    private final int depth;
+
+    public UmiTree(int maxMismatches, int depth) {
+        this.treeSearchParameters = new TreeSearchParameters(maxMismatches, 0, 0);
+        this.depth = depth;
+    }
+
+    public UmiTree() {
+        this(2, -1);
+    }
+
+    public void update(UmiCoverageAndQuality umiCoverageAndQuality) {
+        umiTree.put(umiCoverageAndQuality.getUmiTag().getSequence(), umiCoverageAndQuality);
+    }
 }

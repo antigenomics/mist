@@ -16,28 +16,26 @@
 package com.antigenomics.mist.preprocess;
 
 import com.antigenomics.mist.primer.PrimerSearcherResult;
-import com.antigenomics.mist.primer.pattern.PatternSearchResult;
+import com.milaboratory.core.sequence.NSequenceWithQuality;
 
 public class HeaderUtil {
     public static final String TOKEN_SEP = " ",
             FIELD_SEP = "_",
             PRIMER_ID_TOKEN = "PID" + FIELD_SEP,
-            LEFT_UMI_TOKEN = "MIL" + FIELD_SEP,
-            RIGHT_UMI_TOKEN = "MIR" + FIELD_SEP;
+            UMI_TOKEN = "UMI" + FIELD_SEP;
 
-    public static String generateHeader(PrimerSearcherResult primerSearcherResult) {
+    public static String updateHeader(String description, PrimerSearcherResult primerSearcherResult) {
         String primerId = primerSearcherResult.getPrimerId();
-        PatternSearchResult leftResult = primerSearcherResult.getLeftResult(),
-                rightResult = primerSearcherResult.getRightResult();
+        NSequenceWithQuality umiNSQ = primerSearcherResult.getLeftResult().getUmi()
+                .concatenate(primerSearcherResult.getRightResult().getUmi());
 
-        return TOKEN_SEP +
-                PRIMER_ID_TOKEN + primerId +
-                (leftResult.getUmi().size() > 0 ?
-                        TOKEN_SEP + LEFT_UMI_TOKEN + leftResult.getUmi().getSequence().toString() +
-                                FIELD_SEP + leftResult.getUmi().getQuality().toString() : "") +
-                (rightResult.getUmi().size() > 0 ?
-                        RIGHT_UMI_TOKEN + rightResult.getUmi().getSequence().toString() +
-                                FIELD_SEP + rightResult.getUmi().getQuality().toString() : "") +
+        return description + TOKEN_SEP + PRIMER_ID_TOKEN +
+                primerId +
+                (umiNSQ.size() > 0 ?
+                        TOKEN_SEP + UMI_TOKEN +
+                                umiNSQ.getSequence().toString() +
+                                FIELD_SEP +
+                                umiNSQ.getQuality().toString() : "") +
                 TOKEN_SEP;
     }
 }

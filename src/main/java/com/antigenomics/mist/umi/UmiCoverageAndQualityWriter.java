@@ -33,11 +33,9 @@ public class UmiCoverageAndQualityWriter implements InputPort<UmiCoverageAndQual
             writer.close();
         } else {
             writer.println(umiCoverageAndQuality.getUmiTag().getPrimerId() + "\t" +
-                            umiCoverageAndQuality.getUmiTag().getLeftUmi().toString() + "\t" +
-                            umiCoverageAndQuality.getUmiTag().getRightUmi().toString() + "\t" +
+                            umiCoverageAndQuality.getUmiTag().getSequence().toString() + "\t" +
                             umiCoverageAndQuality.getCoverage() + "\t" +
-                            umiCoverageAndQuality.getAverageQualityLeft() + "\t" +
-                            umiCoverageAndQuality.getAverageQualityRight()
+                            umiCoverageAndQuality.getQuality()
             );
         }
     }

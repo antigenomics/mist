@@ -15,7 +15,6 @@
 
 package com.antigenomics.mist.preprocess;
 
-import com.antigenomics.mist.primer.PrimerSearcherResult;
 import com.milaboratory.core.io.sequence.PairedRead;
 import com.milaboratory.core.io.sequence.SingleReadImpl;
 import com.milaboratory.core.sequence.NSequenceWithQuality;
@@ -29,21 +28,27 @@ public class PairedReadGroomer extends ReadGroomer<PairedRead> {
     protected PairedRead process(boolean reversed, int from, int to, String newDescription, ReadWrapper readWrapper) {
         NSequenceWithQuality data1 = readWrapper.getData(0, reversed),
                 data2 = readWrapper.getData(1, reversed);
+        
+        long readId = readWrapper.getRead().getId();
 
         if (trim) {
             from = from < 0 ? 0 : from;
             to = to < 0 ? data2.size() : to;
             return new PairedRead(
-                    new SingleReadImpl(readWrapper.getRead().getId(), data1.getRange(from, data1.size()),
-                            readWrapper.getRead().getRead(0).getDescription() + newDescription),
-                    new SingleReadImpl(readWrapper.getRead().getId(), data2.getRange(0, to),
-                            readWrapper.getRead().getRead(1).getDescription() + newDescription));
+                    new SingleReadImpl(readId,
+                            data1.getRange(from, data1.size()),
+                            newDescription),
+                    new SingleReadImpl(readId,
+                            data2.getRange(0, to),
+                            newDescription));
         } else {
             return new PairedRead(
-                    new SingleReadImpl(readWrapper.getRead().getId(), data1,
-                            readWrapper.getRead().getRead(0).getDescription() + newDescription),
-                    new SingleReadImpl(readWrapper.getRead().getId(), data2,
-                            readWrapper.getRead().getRead(1).getDescription() + newDescription));
+                    new SingleReadImpl(readId,
+                            data1,
+                            newDescription),
+                    new SingleReadImpl(readId,
+                            data2,
+                            newDescription));
         }
     }
 }

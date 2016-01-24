@@ -19,24 +19,19 @@ import com.milaboratory.core.sequence.NucleotideSequence;
 
 public class UmiTag {
     private final String primerId;
-    private final NucleotideSequence leftUmi, rightUmi;
+    private final NucleotideSequence sequence;
 
-    public UmiTag(String primerId, NucleotideSequence leftUmi, NucleotideSequence rightUmi) {
+    public UmiTag(String primerId, NucleotideSequence sequence) {
         this.primerId = primerId;
-        this.leftUmi = leftUmi;
-        this.rightUmi = rightUmi;
+        this.sequence = sequence;
     }
 
     public String getPrimerId() {
         return primerId;
     }
 
-    public NucleotideSequence getLeftUmi() {
-        return leftUmi;
-    }
-
-    public NucleotideSequence getRightUmi() {
-        return rightUmi;
+    public NucleotideSequence getSequence() {
+        return sequence;
     }
 
     @Override
@@ -46,18 +41,11 @@ public class UmiTag {
 
         UmiTag umiTag = (UmiTag) o;
 
-        if (!leftUmi.equals(umiTag.leftUmi)) return false;
-        if (!primerId.equals(umiTag.primerId)) return false;
-        if (!rightUmi.equals(umiTag.rightUmi)) return false;
-
-        return true;
+        return primerId.equals(umiTag.primerId) && sequence.equals(umiTag.sequence);
     }
 
     @Override
     public int hashCode() {
-        int result = primerId.hashCode();
-        result = 31 * result + leftUmi.hashCode();
-        result = 31 * result + rightUmi.hashCode();
-        return result;
+        return 31 * primerId.hashCode() + sequence.hashCode();
     }
 }
