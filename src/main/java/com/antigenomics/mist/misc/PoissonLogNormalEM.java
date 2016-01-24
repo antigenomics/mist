@@ -1,6 +1,6 @@
 package com.antigenomics.mist.misc;
 
-import org.apache.commons.math3.distribution.NormalDistribution;
+import org.apache.commons.math3.distribution.LogNormalDistribution;
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
@@ -11,7 +11,6 @@ import java.util.Map;
 public class PoissonLogNormalEM {
     private static final int N_EM_PASSES = 100;
     private static final double JITTER = 1e-6;
-    private static final double LOG2 = Math.log(2);
     private final Map<Integer, Element> elements = new HashMap<>();
 
     public PoissonLogNormalEM() {
@@ -38,7 +37,7 @@ public class PoissonLogNormalEM {
 
         for (int i = 0; i < N_EM_PASSES; i++) {
             // M-step
-            double lambda = 0, mu = 0, sigma = 0,
+            double poissonMean = 0, logNormalMean = 0, logNormalStd = 0,
                     logNormalEstimateProbSum = 0, logNormalProbSum = 0, poissonProbSum = 0;
 
             for (Element element : elements.values()) {
@@ -46,30 +45,31 @@ public class PoissonLogNormalEM {
                         poissonFactor = element.count * (1.0 - element.logNormalProb),
                         logNormalEstimateFactor = logNormalFactor * element.value;
 
-                mu += logNormalEstimateFactor * element.getLog2Value();
-                sigma += logNormalEstimateFactor * element.getLog2Value() * element.getLog2Value();
-                lambda += poissonFactor * element.value;
+                logNormalMean += logNormalEstimateFactor * element.value;
+                logNormalStd += logNormalEstimateFactor * element.value * element.value;
+                poissonMean += poissonFactor * element.value;
 
                 logNormalEstimateProbSum += logNormalEstimateFactor;
                 logNormalProbSum += logNormalFactor;
                 poissonProbSum += poissonFactor;
             }
 
-            mu /= logNormalEstimateProbSum;     // <x>
-            sigma /= logNormalEstimateProbSum;  // <x^2>
-            sigma -= mu * mu;                   // <x^2> - <x>^2
-            sigma = Math.sqrt(sigma);
+            logNormalMean /= logNormalEstimateProbSum;
+            // <x^2> - <x>^2
+            logNormalStd /= logNormalEstimateProbSum;
+            logNormalStd -= logNormalMean * logNormalMean;
+            logNormalStd = Math.sqrt(logNormalStd);
 
             // Here we estimate the remainder of poissonProbSum for unobserved elements (x=0)
 
             poissonProbSum += unseenSpeciesCount > 0 ? unseenSpeciesCount *
                     solveLambda(
                             poissonProbSum / unseenSpeciesCount,
-                            lambda / unseenSpeciesCount
+                            poissonMean / unseenSpeciesCount
                     ) :
                     0;
 
-            lambda /= poissonProbSum;
+            poissonMean /= poissonProbSum;
 
 
             // E-step
@@ -77,7 +77,7 @@ public class PoissonLogNormalEM {
 
             double logNormalPrior = logNormalProbSum / (logNormalProbSum + poissonProbSum);
 
-            model = new PoissonLogNormalModel(lambda, mu, sigma, logNormalPrior);
+            model = new PoissonLogNormalModel(poissonMean, logNormalMean, logNormalStd, logNormalPrior);
 
             for (Element element : elements.values()) {
                 double logNormalProb = model.computeLogNormalDensity(element.value),
@@ -87,12 +87,13 @@ public class PoissonLogNormalEM {
                 element.logNormalProb = logNormalProb * logNormalPrior /
                         (logNormalPrior * logNormalProb + (1.0 - logNormalPrior) * poissonProb);
             }
-
+            /*
             System.out.println("[EM-iter#" + i + "]");
             System.out.println("priorG=" + logNormalPrior);
             System.out.println("mu=" + mu);
             System.out.println("sigma=" + sigma);
             System.out.println("lambda=" + lambda);
+            */
         }
 
         return model;
@@ -130,16 +131,12 @@ public class PoissonLogNormalEM {
     }
 
     private class Element {
-        private double logNormalProb = 0.5;
-        private int count = 0;
-        private final int value;
+        double logNormalProb = 0.5;
+        int count = 0;
+        final int value;
 
         public Element(int value) {
             this.value = value;
-        }
-
-        public double getLog2Value() {
-            return Math.log(value) / LOG2;
         }
 
         public void incrementCounter() {
@@ -148,21 +145,26 @@ public class PoissonLogNormalEM {
     }
 
     public static class PoissonLogNormalModel {
+        private static final double LOG2 = Math.log(2);
         private final double lambda, mu, sigma, logNormalPrior;
-        private final NormalDistribution normalDistribution;
+        private final LogNormalDistribution logNormalDistribution;
         private final PoissonDistribution poissonDistribution;
+        private final double missingDensity;
 
-        public PoissonLogNormalModel(double lambda, double mu, double sigma, double logNormalPrior) {
-            this.lambda = lambda;
-            this.mu = mu;
-            this.sigma = sigma;
+        public PoissonLogNormalModel(double poissonMean, double logNormalMean, double logNormalStd, double logNormalPrior) {
+            this.lambda = poissonMean;
+            this.mu = Math.log(logNormalMean/Math.sqrt(1.0 + logNormalStd * logNormalStd / logNormalMean / logNormalMean));
+            this.sigma = Math.sqrt(Math.log(1.0 + logNormalStd * logNormalStd / logNormalMean / logNormalMean));
             this.logNormalPrior = logNormalPrior;
-            this.normalDistribution = new NormalDistribution(mu, sigma + JITTER);
+            this.logNormalDistribution = new LogNormalDistribution(this.mu, this.sigma + JITTER);
             this.poissonDistribution = new PoissonDistribution(lambda + JITTER);
+
+            this.missingDensity = logNormalPrior * logNormalDistribution.cumulativeProbability(1) +
+                    (1.0 - logNormalPrior) * poissonDistribution.cumulativeProbability(1);
         }
 
         public double computeLogNormalDensity(int x) {
-            return normalDistribution.density(Math.log(x) / LOG2);
+            return logNormalDistribution.density(x);
         }
 
         public double computePoissonDensity(int x) {
@@ -173,8 +175,16 @@ public class PoissonLogNormalEM {
             throw new NotImplementedException();
         }
 
-        public double computeDensity(int x) {
-            return logNormalPrior * computeLogNormalDensity(x) + (1.0 - logNormalPrior) * computePoissonDensity(x);
+        public double computeLog2HistogramDensity(int x) {
+            int from = (int) (Math.log(x) / LOG2), to = from + 1;
+
+            from = (int) Math.pow(2.0, from);
+            to = (int) Math.pow(2.0, to);
+
+            double p = logNormalPrior * logNormalDistribution.probability(from, to) +
+                    (1.0 - logNormalPrior) * poissonDistribution.cumulativeProbability(from, to);
+
+            return p / (1.0 - missingDensity);
         }
 
         public double getLambda() {

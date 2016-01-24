@@ -8,7 +8,7 @@ public class UmiCoverageStatistics {
     private final int[] histogram;
     private final int numberOfBins;
     private final PoissonLogNormalEM poissonLogNormalEM;
-    private int total;
+    private int total, totalCoverage;
 
     public UmiCoverageStatistics() {
         this(65536);
@@ -20,6 +20,7 @@ public class UmiCoverageStatistics {
         this.weightedHistogram = new long[numberOfBins];
         this.histogram = new int[numberOfBins];
         this.total = 0;
+        this.totalCoverage = 0;
     }
 
     private int bin(long x) {
@@ -27,14 +28,16 @@ public class UmiCoverageStatistics {
     }
 
     public void update(UmiCoverageAndQuality umiCoverageAndQuality) {
-        int bin = bin(umiCoverageAndQuality.getCoverage());
+        int coverage = umiCoverageAndQuality.getCoverage(),
+                bin = bin(coverage);
 
-        weightedHistogram[bin] += umiCoverageAndQuality.getCoverage();
+        weightedHistogram[bin] += coverage;
         histogram[bin]++;
 
-        poissonLogNormalEM.update(umiCoverageAndQuality.getCoverage());
+        poissonLogNormalEM.update(coverage);
 
         total++;
+        totalCoverage += coverage;
     }
 
     public int getThresholdEstimate() {
@@ -60,7 +63,7 @@ public class UmiCoverageStatistics {
     }
 
     public double getWeightedDensity(int umiCoverage) {
-        return getWeightedCount(umiCoverage) / total;
+        return getWeightedCount(umiCoverage) / totalCoverage;
     }
 
     public double getWeightedCount(int umiCoverage) {

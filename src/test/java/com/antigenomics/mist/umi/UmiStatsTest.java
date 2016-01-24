@@ -65,7 +65,7 @@ public class UmiStatsTest {
             int x = (int) Math.pow(2, i);
             System.out.println(x + "\t" +
                     coverageStats.getDensity(x) + "\t" + coverageStats.getWeightedDensity(x) + "\t" +
-                    densityModel.computeDensity(x)
+                    densityModel.computeLog2HistogramDensity(x) * x
             );
         }
     }
