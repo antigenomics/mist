@@ -38,4 +38,20 @@ public class HeaderUtil {
                                 umiNSQ.getQuality().toString() : "") +
                 TOKEN_SEP;
     }
+
+    public static String parsePrimerId(String description) {
+        String[] tokens = description.split(PRIMER_ID_TOKEN);
+        
+        return tokens[1].split(TOKEN_SEP)[0];
+    }
+
+    public static NSequenceWithQuality parseUmiNSQ(String description) {
+        String[] tokens = description.split(UMI_TOKEN);
+
+        String umiString = tokens[1].split(TOKEN_SEP)[0];
+
+        String[] seqAndQual = umiString.split(FIELD_SEP);
+
+        return new NSequenceWithQuality(seqAndQual[0], seqAndQual[1]);
+    }
 }
