@@ -21,18 +21,28 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class UmiStatistics {
-    private final Map<String, UmiCoverageModel> umiCoverageModelBySample = new HashMap<>();
+    private final Map<String, UmiCoverageStatistics> umiCoverageModelBySample = new HashMap<>();
 
     public UmiStatistics() {
     }
 
-    public void update(OutputPort<UmiInfo> umiInfoProvider) {
-        UmiInfo umiInfo;
+    public void update(OutputPort<UmiCoverageAndQuality> umiInfoProvider) {
+        UmiCoverageAndQuality umiCoverageAndQuality;
 
-        while ((umiInfo = umiInfoProvider.take()) != null) {
+        while ((umiCoverageAndQuality = umiInfoProvider.take()) != null) {
             umiCoverageModelBySample
-                    .computeIfAbsent(umiInfo.getUmiTag().getPrimerId(), tmp -> new UmiCoverageModel())
-                    .update(umiInfo);
+                    .computeIfAbsent(umiCoverageAndQuality.getUmiTag().getPrimerId(), tmp -> new UmiCoverageStatistics())
+                    .update(umiCoverageAndQuality);
         }
+    }
+
+    /**
+     * Returns an empty model if sample does not exist
+     *
+     * @param sampleId
+     * @return
+     */
+    public UmiCoverageStatistics getUmiCoverageStatistics(String sampleId) {
+        return umiCoverageModelBySample.computeIfAbsent(sampleId, tmp -> new UmiCoverageStatistics());
     }
 }

@@ -22,7 +22,7 @@ public class PoissonLogNormalEMTest {
                 muExpected, sigmaExpected);
         PoissonDistribution poissonDistr = new PoissonDistribution(new Well19937c(51102),
                 lambdaExpected, PoissonDistribution.DEFAULT_EPSILON, PoissonDistribution.DEFAULT_MAX_ITERATIONS);
-        PoissonLogNormalEM model = new PoissonLogNormalEM();
+        PoissonLogNormalEM em = new PoissonLogNormalEM();
 
         int n = 10000;
 
@@ -32,10 +32,10 @@ public class PoissonLogNormalEMTest {
                     poissonDistr.sample();
 
             if (x > 0)
-                model.update(x);
+                em.update(x);
         }
 
-        model.run(expectedThreshold);
+        PoissonLogNormalEM.PoissonLogNormalModel model =  em.run(expectedThreshold);
 
         Assert.assertTrue(Math.abs(model.getLambda() - lambdaExpected) < 0.05);
         Assert.assertTrue(Math.abs(model.getMu() - muExpected) < 0.2);

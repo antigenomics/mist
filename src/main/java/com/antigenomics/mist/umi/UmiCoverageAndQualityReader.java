@@ -24,15 +24,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
-public class UmiInfoReader implements OutputPort<UmiInfo> {
+public class UmiCoverageAndQualityReader implements OutputPort<UmiCoverageAndQuality> {
     private final BufferedReader reader;
 
-    public UmiInfoReader(InputStream inputStream) {
+    public UmiCoverageAndQualityReader(InputStream inputStream) {
         this.reader = new BufferedReader(new InputStreamReader(inputStream));
     }
 
     @Override
-    public UmiInfo take() {
+    public UmiCoverageAndQuality take() {
         String line;
         try {
             line = reader.readLine();
@@ -46,7 +46,7 @@ public class UmiInfoReader implements OutputPort<UmiInfo> {
 
         String[] splitLine = line.split("\t");
 
-        return new UmiInfo(
+        return new UmiCoverageAndQuality(
                 new UmiTag(
                         splitLine[0],
                         new NucleotideSequence(splitLine[1]),

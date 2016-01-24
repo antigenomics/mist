@@ -18,7 +18,7 @@ package com.antigenomics.mist.preprocess;
 import cc.redberry.pipe.Processor;
 import com.antigenomics.mist.primer.PrimerSearcherArray;
 import com.antigenomics.mist.primer.PrimerSearcherResult;
-import com.antigenomics.mist.umi.UmiSetInfo;
+import com.antigenomics.mist.umi.UmiAccumulator;
 import com.milaboratory.core.io.sequence.SequenceRead;
 
 import java.util.concurrent.atomic.AtomicLong;
@@ -29,13 +29,13 @@ public class SearchProcessor<T extends SequenceRead> implements Processor<T, Pri
     private final AtomicLong totalReadsCounter = new AtomicLong(),
             matchedReadsCounter = new AtomicLong(),
             reverseFoundCounter = new AtomicLong();
-    private final UmiSetInfo umiSetInfo;
+    private final UmiAccumulator umiAccumulator;
 
     public SearchProcessor(ReadWrapperFactory readWrapperFactory,
                            PrimerSearcherArray primerSearcherArray) {
         this.readWrapperFactory = readWrapperFactory;
         this.primerSearcherArray = primerSearcherArray;
-        this.umiSetInfo = new UmiSetInfo();
+        this.umiAccumulator = new UmiAccumulator();
     }
 
     @Override
@@ -47,7 +47,7 @@ public class SearchProcessor<T extends SequenceRead> implements Processor<T, Pri
 
             if (result.getLeftResult().getUmi().size() +
                     result.getRightResult().getUmi().size() > 0) {
-                umiSetInfo.update(result.getPrimerId(),
+                umiAccumulator.update(result.getPrimerId(),
                         result.getLeftResult().getUmi(),
                         result.getRightResult().getUmi());
             }
@@ -75,7 +75,7 @@ public class SearchProcessor<T extends SequenceRead> implements Processor<T, Pri
         return 1.0f - getFoundInReverseCount() / (float) getMatchedReadsCount();
     }
 
-    public UmiSetInfo getUmiSetInfo() {
-        return umiSetInfo;
+    public UmiAccumulator getUmiAccumulator() {
+        return umiAccumulator;
     }
 }

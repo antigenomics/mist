@@ -11,9 +11,8 @@ import java.util.Map;
 public class PoissonLogNormalEM {
     private static final int N_EM_PASSES = 100;
     private static final double JITTER = 1e-6;
+    private static final double LOG2 = Math.log(2);
     private final Map<Integer, Element> elements = new HashMap<>();
-    private double lambda, mu, sigma, gaussianRatio;
-    private boolean ran;
 
     public PoissonLogNormalEM() {
 
@@ -22,10 +21,9 @@ public class PoissonLogNormalEM {
     public void update(int x) {
         Element element = elements.computeIfAbsent(x, tmp -> new Element(x));
         element.incrementCounter();
-        ran = false;
     }
 
-    public void run(int thresholdGuess) {
+    public PoissonLogNormalModel run(int thresholdGuess) {
         for (Element element : elements.values()) {
             element.logNormalProb = element.value < thresholdGuess ? 0.0 : 1.0;
         }
@@ -36,17 +34,12 @@ public class PoissonLogNormalEM {
                 f2 = elements.containsKey(2) ? elements.get(2).count : 0.0,
                 unseenSpeciesCount = f1 * (f1 - 1) / 2 / (f2 + 1);
 
+        PoissonLogNormalModel model = null;
+
         for (int i = 0; i < N_EM_PASSES; i++) {
-            double logNormalEstimateProbSum = 0,
-                    logNormalProbSum = 0,
-                    poissonProbSum = 0;
-
-
             // M-step
-
-            mu = 0;
-            lambda = 0;
-            sigma = 0;
+            double lambda = 0, mu = 0, sigma = 0,
+                    logNormalEstimateProbSum = 0, logNormalProbSum = 0, poissonProbSum = 0;
 
             for (Element element : elements.values()) {
                 double logNormalFactor = element.count * element.logNormalProb,
@@ -82,60 +75,27 @@ public class PoissonLogNormalEM {
             // E-step
             // Prior
 
-            gaussianRatio = logNormalProbSum / (logNormalProbSum + poissonProbSum);
+            double logNormalPrior = logNormalProbSum / (logNormalProbSum + poissonProbSum);
 
-            NormalDistribution normalDistribution = new NormalDistribution(mu, sigma + JITTER);
-            PoissonDistribution poissonDistribution = new PoissonDistribution(lambda + JITTER);
+            model = new PoissonLogNormalModel(lambda, mu, sigma, logNormalPrior);
 
             for (Element element : elements.values()) {
-                double logNormalProb = normalDistribution.density(element.getLog2Value()),
-                        poissonProb = poissonDistribution.probability(element.value);
+                double logNormalProb = model.computeLogNormalDensity(element.value),
+                        poissonProb = model.computePoissonDensity(element.value);
 
                 // Bayesian update
-                element.logNormalProb = logNormalProb * gaussianRatio /
-                        (gaussianRatio * logNormalProb + (1.0 - gaussianRatio) * poissonProb);
+                element.logNormalProb = logNormalProb * logNormalPrior /
+                        (logNormalPrior * logNormalProb + (1.0 - logNormalPrior) * poissonProb);
             }
 
-            /*
             System.out.println("[EM-iter#" + i + "]");
-            System.out.println("priorG=" + gaussianRatio);
+            System.out.println("priorG=" + logNormalPrior);
             System.out.println("mu=" + mu);
             System.out.println("sigma=" + sigma);
             System.out.println("lambda=" + lambda);
-            */
         }
-        ran = true;
-    }
 
-    public boolean wasRan() {
-        return ran;
-    }
-
-    public double estimateThreshold() {
-        throw new NotImplementedException();
-    }
-
-    protected boolean classify(int x) {
-        // This is too straightforward implementation
-        // we assume that no new 'x' will be introduced here
-        assert elements.containsKey(x);
-        return elements.get(x).logNormalProb >= 0.5;
-    }
-
-    public double getLambda() {
-        return lambda;
-    }
-
-    public double getMu() {
-        return mu;
-    }
-
-    public double getSigma() {
-        return sigma;
-    }
-
-    public double getLogNormalRatio() {
-        return gaussianRatio;
+        return model;
     }
 
     private static double solveLambda(double K, double T) {
@@ -166,7 +126,7 @@ public class PoissonLogNormalEM {
     }
 
     private static double ddf(double x) {
-        return -2 * Math.exp(-x) + x * Math.exp(-x);
+        return -2.0 * Math.exp(-x) + x * Math.exp(-x);
     }
 
     private class Element {
@@ -179,11 +139,59 @@ public class PoissonLogNormalEM {
         }
 
         public double getLog2Value() {
-            return Math.log(value) / Math.log(2.0);
+            return Math.log(value) / LOG2;
         }
 
         public void incrementCounter() {
             count++;
         }
+    }
+
+    public static class PoissonLogNormalModel {
+        private final double lambda, mu, sigma, logNormalPrior;
+        private final NormalDistribution normalDistribution;
+        private final PoissonDistribution poissonDistribution;
+
+        public PoissonLogNormalModel(double lambda, double mu, double sigma, double logNormalPrior) {
+            this.lambda = lambda;
+            this.mu = mu;
+            this.sigma = sigma;
+            this.logNormalPrior = logNormalPrior;
+            this.normalDistribution = new NormalDistribution(mu, sigma + JITTER);
+            this.poissonDistribution = new PoissonDistribution(lambda + JITTER);
+        }
+
+        public double computeLogNormalDensity(int x) {
+            return normalDistribution.density(Math.log(x) / LOG2);
+        }
+
+        public double computePoissonDensity(int x) {
+            return poissonDistribution.probability(x);
+        }
+
+        public int estimateThreshold() {
+            throw new NotImplementedException();
+        }
+
+        public double computeDensity(int x) {
+            return logNormalPrior * computeLogNormalDensity(x) + (1.0 - logNormalPrior) * computePoissonDensity(x);
+        }
+
+        public double getLambda() {
+            return lambda;
+        }
+
+        public double getMu() {
+            return mu;
+        }
+
+        public double getSigma() {
+            return sigma;
+        }
+
+        public double getLogNormalRatio() {
+            return logNormalPrior;
+        }
+
     }
 }

@@ -20,24 +20,24 @@ import cc.redberry.pipe.InputPort;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 
-public class UmiInfoWriter implements InputPort<UmiInfo> {
+public class UmiCoverageAndQualityWriter implements InputPort<UmiCoverageAndQuality> {
     private final PrintWriter writer;
 
-    public UmiInfoWriter(OutputStream outputStream) {
+    public UmiCoverageAndQualityWriter(OutputStream outputStream) {
         this.writer = new PrintWriter(outputStream);
     }
 
     @Override
-    public void put(UmiInfo umiInfo) {
-        if (umiInfo == null) {
+    public void put(UmiCoverageAndQuality umiCoverageAndQuality) {
+        if (umiCoverageAndQuality == null) {
             writer.close();
         } else {
-            writer.println(umiInfo.getUmiTag().getPrimerId() + "\t" +
-                            umiInfo.getUmiTag().getLeftUmi().toString() + "\t" +
-                            umiInfo.getUmiTag().getRightUmi().toString() + "\t" +
-                            umiInfo.getCount() + "\t" +
-                            umiInfo.getAverageQualityLeft() + "\t" +
-                            umiInfo.getAverageQualityRight()
+            writer.println(umiCoverageAndQuality.getUmiTag().getPrimerId() + "\t" +
+                            umiCoverageAndQuality.getUmiTag().getLeftUmi().toString() + "\t" +
+                            umiCoverageAndQuality.getUmiTag().getRightUmi().toString() + "\t" +
+                            umiCoverageAndQuality.getCoverage() + "\t" +
+                            umiCoverageAndQuality.getAverageQualityLeft() + "\t" +
+                            umiCoverageAndQuality.getAverageQualityRight()
             );
         }
     }

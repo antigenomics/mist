@@ -20,6 +20,7 @@ import com.antigenomics.mist.preprocess.ReadWrapper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLongArray;
+import java.util.stream.Collectors;
 
 public class PrimerSearcherArray {
     private final List<PrimerSearcher> primerSearchers;
@@ -107,5 +108,13 @@ public class PrimerSearcherArray {
 
     public int size() {
         return primerSearchers.size();
+    }
+
+    /**
+     * Gets unique sample IDs
+     * @return
+     */
+    public List<String> getSampleIds() {
+        return primerSearchers.stream().map(PrimerSearcher::getPrimerId).distinct().collect(Collectors.toList());
     }
 }

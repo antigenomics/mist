@@ -20,12 +20,12 @@ import com.milaboratory.core.sequence.SequenceQuality;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class UmiInfoFactory {
+class UmiCoverageAndQualityFactory {
     private final UmiTag umiTag;
     private final AtomicInteger counter;
     private final AtomicFloatArray qualitySumLeft, qualitySumRight;
 
-    public UmiInfoFactory(UmiTag umiTag, int lengthLeft, int lengthRight) {
+    public UmiCoverageAndQualityFactory(UmiTag umiTag, int lengthLeft, int lengthRight) {
         this.umiTag = umiTag;
         this.counter = new AtomicInteger();
         this.qualitySumLeft = new AtomicFloatArray(lengthLeft);
@@ -49,7 +49,7 @@ public class UmiInfoFactory {
         }
     }
 
-    public UmiInfo create() {
+    public UmiCoverageAndQuality create() {
         byte[] dataLeft = new byte[qualitySumLeft.length()],
                 dataRight = new byte[qualitySumRight.length()];
         int count = counter.get();
@@ -62,6 +62,6 @@ public class UmiInfoFactory {
             dataRight[i] = (byte) (qualitySumRight.get(i) / count);
         }
 
-        return new UmiInfo(umiTag, count, new SequenceQuality(dataLeft), new SequenceQuality(dataRight));
+        return new UmiCoverageAndQuality(umiTag, count, new SequenceQuality(dataLeft), new SequenceQuality(dataRight));
     }
 }

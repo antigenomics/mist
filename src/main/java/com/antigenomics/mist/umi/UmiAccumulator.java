@@ -22,35 +22,35 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class UmiSetInfo {
-    private final Map<UmiTag, UmiInfoFactory> umiInfoFactoryMap = new ConcurrentHashMap<>();
+public class UmiAccumulator {
+    private final Map<UmiTag, UmiCoverageAndQualityFactory> umiInfoFactoryMap = new ConcurrentHashMap<>();
 
-    public UmiSetInfo() {
+    public UmiAccumulator() {
     }
 
     public void update(String primerId,
                        NSequenceWithQuality leftUmi, NSequenceWithQuality rightUmi) {
         UmiTag umiTag = new UmiTag(primerId, leftUmi.getSequence(), rightUmi.getSequence());
 
-        UmiInfoFactory umiInfoFactory = umiInfoFactoryMap.computeIfAbsent(umiTag,
-                tmp -> new UmiInfoFactory(umiTag, leftUmi.size(), rightUmi.size()));
+        UmiCoverageAndQualityFactory umiCoverageAndQualityFactory = umiInfoFactoryMap.computeIfAbsent(umiTag,
+                tmp -> new UmiCoverageAndQualityFactory(umiTag, leftUmi.size(), rightUmi.size()));
 
-        umiInfoFactory.update(leftUmi.getQuality(), rightUmi.getQuality());
+        umiCoverageAndQualityFactory.update(leftUmi.getQuality(), rightUmi.getQuality());
     }
 
-    public OutputPort<UmiInfo> getUmiInfoProvider() {
+    public OutputPort<UmiCoverageAndQuality> getUmiInfoProvider() {
         return new UmiInfoProvider();
     }
 
-    private class UmiInfoProvider implements OutputPort<UmiInfo> {
-        private final Iterator<UmiInfoFactory> iter;
+    private class UmiInfoProvider implements OutputPort<UmiCoverageAndQuality> {
+        private final Iterator<UmiCoverageAndQualityFactory> iter;
 
         public UmiInfoProvider() {
             this.iter = umiInfoFactoryMap.values().iterator();
         }
 
         @Override
-        public UmiInfo take() {
+        public UmiCoverageAndQuality take() {
             if (!iter.hasNext()) {
                 return null;
             }

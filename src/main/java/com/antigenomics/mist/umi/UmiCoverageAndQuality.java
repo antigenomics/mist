@@ -17,15 +17,15 @@ package com.antigenomics.mist.umi;
 
 import com.milaboratory.core.sequence.SequenceQuality;
 
-public class UmiInfo {
+public class UmiCoverageAndQuality {
     private final UmiTag umiTag;
-    private final int count;
+    private final int coverage;
     private final SequenceQuality averageQualityLeft, averageQualityRight;
 
-    public UmiInfo(UmiTag umiTag, int count,
-                   SequenceQuality averageQualityLeft, SequenceQuality averageQualityRight) {
+    public UmiCoverageAndQuality(UmiTag umiTag, int coverage,
+                                 SequenceQuality averageQualityLeft, SequenceQuality averageQualityRight) {
         this.umiTag = umiTag;
-        this.count = count;
+        this.coverage = coverage;
         this.averageQualityLeft = averageQualityLeft;
         this.averageQualityRight = averageQualityRight;
     }
@@ -34,8 +34,8 @@ public class UmiInfo {
         return umiTag;
     }
 
-    public int getCount() {
-        return count;
+    public int getCoverage() {
+        return coverage;
     }
 
     public SequenceQuality getAverageQualityLeft() {

@@ -17,6 +17,7 @@ package com.antigenomics.mist.umi;
 
 import cc.redberry.pipe.blocks.ParallelProcessor;
 import com.antigenomics.mist.TestUtil;
+import com.antigenomics.mist.misc.PoissonLogNormalEM;
 import com.antigenomics.mist.preprocess.ReadWrapperFactory;
 import com.antigenomics.mist.preprocess.SearchProcessor;
 import com.antigenomics.mist.primer.PrimerSearcherArray;
@@ -52,6 +53,12 @@ public class UmiStatsTest {
 
         UmiStatistics umiStatistics = new UmiStatistics();
 
-        umiStatistics.update(searchProcessor.getUmiSetInfo().getUmiInfoProvider());
+        umiStatistics.update(searchProcessor.getUmiAccumulator().getUmiInfoProvider());
+
+        UmiCoverageStatistics coverageStats = umiStatistics.getUmiCoverageStatistics(primerSearcherArray.getSampleIds().get(0));
+
+        PoissonLogNormalEM.PoissonLogNormalModel densityModel = coverageStats.getWeightedDensityModel();
+
+        System.out.println("zzz");
     }
 }

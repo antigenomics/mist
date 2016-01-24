@@ -29,7 +29,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-public class UmiSetInfoTest {
+public class UmiAccumulatorTest {
     @Test
     public void concurrentTest() throws IOException {
         PrimerSearcherArray primerSearcherArray = TestUtil.readBarcodes("umi_barcodes.txt");
@@ -56,13 +56,13 @@ public class UmiSetInfoTest {
                 matchedReads++;
         }
 
-        UmiSetInfo umiSetInfo = searchProcessor.getUmiSetInfo();
-        OutputPort<UmiInfo> umiInfoProvider = umiSetInfo.getUmiInfoProvider();
+        UmiAccumulator umiAccumulator = searchProcessor.getUmiAccumulator();
+        OutputPort<UmiCoverageAndQuality> umiInfoProvider = umiAccumulator.getUmiInfoProvider();
 
-        UmiInfo umiInfo;
+        UmiCoverageAndQuality umiCoverageAndQuality;
         int readsInUmis = 0;
-        while ((umiInfo = umiInfoProvider.take()) != null) {
-            readsInUmis += umiInfo.getCount();
+        while ((umiCoverageAndQuality = umiInfoProvider.take()) != null) {
+            readsInUmis += umiCoverageAndQuality.getCoverage();
         }
 
         Assert.assertTrue(matchedReads > 0);
