@@ -1,14 +1,21 @@
 package com.antigenomics.mist.umi;
 
+import com.antigenomics.mist.misc.PoissonLogNormalEM;
+
 // non thread-safe
-public class UmiStatisticsBySample {
+public class UmiCoverageModel {
     private final long[] weightedHistogram;
     private final int[] histogram;
     private final int numberOfBins;
-    //private final PoissonLogNormalEM model;
+    private final PoissonLogNormalEM model;
 
-    public UmiStatisticsBySample(int threshold) {
-        this.numberOfBins = (int) (Math.log(threshold) / Math.log(2)) + 1;
+    public UmiCoverageModel() {
+        this(65536);
+    }
+
+    public UmiCoverageModel(int maxCount) {
+        this.model = new PoissonLogNormalEM();
+        this.numberOfBins = (int) (Math.log(maxCount) / Math.log(2)) + 1;
         this.weightedHistogram = new long[numberOfBins];
         this.histogram = new int[numberOfBins];
     }
@@ -22,9 +29,11 @@ public class UmiStatisticsBySample {
 
         weightedHistogram[bin] += umiInfo.getCount();
         histogram[bin]++;
+
+        model.update(umiInfo.getCount());
     }
 
-    public int estimateThreshold() {
+    public int getThresholdEstimate() {
         int indexOfMax = -1;
         long maxValue = -1;
 
@@ -35,6 +44,14 @@ public class UmiStatisticsBySample {
             }
         }
 
-        return (int) Math.pow(2, indexOfMax);
+        return (int) Math.pow(2, indexOfMax / 2);
+    }
+
+    public PoissonLogNormalEM getEMModel() {
+        if (!model.wasRan()) {
+            model.run(getThresholdEstimate());
+        }
+
+        return model;
     }
 }

@@ -23,7 +23,7 @@ import com.milaboratory.core.io.sequence.SequenceRead;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-public class SearchProcessor implements Processor<SequenceRead, PrimerSearcherResult> {
+public class SearchProcessor<T extends SequenceRead> implements Processor<T, PrimerSearcherResult> {
     private final ReadWrapperFactory readWrapperFactory;
     private final PrimerSearcherArray primerSearcherArray;
     private final AtomicLong totalReadsCounter = new AtomicLong(),
@@ -39,7 +39,7 @@ public class SearchProcessor implements Processor<SequenceRead, PrimerSearcherRe
     }
 
     @Override
-    public PrimerSearcherResult process(SequenceRead read) {
+    public PrimerSearcherResult process(T read) {
         PrimerSearcherResult result = primerSearcherArray.search(readWrapperFactory.wrap(read));
         totalReadsCounter.incrementAndGet();
         if (result.isMatched()) {

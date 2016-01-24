@@ -17,36 +17,18 @@ package com.antigenomics.mist.primer;
 
 import com.antigenomics.mist.TestUtil;
 import com.antigenomics.mist.preprocess.ReadWrapperFactory;
-import com.antigenomics.mist.primer.pattern.FuzzyPatternSearcher;
 import com.milaboratory.core.io.sequence.PairedRead;
 import com.milaboratory.core.io.sequence.fastq.PairedFastqReader;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
 import java.util.List;
 
 public class PrimerSearcherArrayTest {
     @Test
     public void realDataTest() throws IOException {
-        BufferedReader barcodesReader = new BufferedReader(new InputStreamReader(TestUtil.resourceAsStream("barcodes.txt")));
-
-        String line;
-
-        List<PrimerSearcher> primerSearchers = new ArrayList<>();
-
-        while ((line = barcodesReader.readLine()) != null) {
-            String[] splitLine = line.split("\t");
-            primerSearchers.add(new PrimerSearcher(splitLine[0],
-                    new FuzzyPatternSearcher(splitLine[1], 3),
-                    new FuzzyPatternSearcher(splitLine[2], 3),
-                    true));
-        }
-
-        PrimerSearcherArray primerSearcherArray = new PrimerSearcherArray(primerSearchers);
+        PrimerSearcherArray primerSearcherArray = TestUtil.readBarcodes("barcodes.txt");
 
         PairedFastqReader reader = new PairedFastqReader(
                 TestUtil.resourceAsStream("sample_R1.fastq.gz"),
@@ -60,7 +42,7 @@ public class PrimerSearcherArrayTest {
         while ((read = reader.take()) != null) {
             total++;
             //try {
-                primerSearcherArray.search(readWrapperFactory.wrap(read));
+            primerSearcherArray.search(readWrapperFactory.wrap(read));
             //} catch (Exception e) {
             //    System.out.println(read.getR1().getData().getSequence());
             //    System.out.println(read.getR2().getData().getSequence());
@@ -69,7 +51,7 @@ public class PrimerSearcherArrayTest {
 
         List<PrimerSearcherStats> stats = primerSearcherArray.getStats();
 
-        int minCount = (int) (0.4 * total / (float) primerSearchers.size());
+        int minCount = (int) (0.4 * total / (float) primerSearcherArray.size());
         int totalMatch = 0;
 
         for (PrimerSearcherStats stat : stats) {

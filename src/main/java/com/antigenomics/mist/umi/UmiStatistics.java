@@ -15,5 +15,24 @@
 
 package com.antigenomics.mist.umi;
 
-public class UmiStatisticsArray {
+import cc.redberry.pipe.OutputPort;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class UmiStatistics {
+    private final Map<String, UmiCoverageModel> umiCoverageModelBySample = new HashMap<>();
+
+    public UmiStatistics() {
+    }
+
+    public void update(OutputPort<UmiInfo> umiInfoProvider) {
+        UmiInfo umiInfo;
+
+        while ((umiInfo = umiInfoProvider.take()) != null) {
+            umiCoverageModelBySample
+                    .computeIfAbsent(umiInfo.getUmiTag().getPrimerId(), tmp -> new UmiCoverageModel())
+                    .update(umiInfo);
+        }
+    }
 }

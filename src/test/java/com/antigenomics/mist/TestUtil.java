@@ -15,8 +15,17 @@
 
 package com.antigenomics.mist;
 
+import com.antigenomics.mist.primer.PrimerSearcher;
+import com.antigenomics.mist.primer.PrimerSearcherArray;
+import com.antigenomics.mist.primer.pattern.DummyPatternSearcher;
+import com.antigenomics.mist.primer.pattern.FuzzyPatternSearcher;
+
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.zip.GZIPInputStream;
 
 public class TestUtil {
@@ -24,6 +33,31 @@ public class TestUtil {
         InputStream inputStream = TestUtil.class.getClassLoader().getResourceAsStream(name);
 
         return name.endsWith(".gz") ? new GZIPInputStream(inputStream) : inputStream;
+    }
+
+    public static PrimerSearcherArray readBarcodes(String resourceName) throws IOException {
+        BufferedReader barcodesReader = new BufferedReader(new InputStreamReader(TestUtil.resourceAsStream(resourceName)));
+
+        String line;
+
+        List<PrimerSearcher> primerSearchers = new ArrayList<>();
+
+        while ((line = barcodesReader.readLine()) != null) {
+            String[] splitLine = line.split("\t");
+
+            String master = splitLine[1], slave = splitLine.length > 2 ? splitLine[2] : ".";
+
+            primerSearchers.add(new PrimerSearcher(splitLine[0],
+                    barcodeExists(master) ? new FuzzyPatternSearcher(master, 3) : new DummyPatternSearcher(),
+                    barcodeExists(slave) ? new FuzzyPatternSearcher(slave, 3) : new DummyPatternSearcher(),
+                    true));
+        }
+
+        return new PrimerSearcherArray(primerSearchers);
+    }
+
+    private static boolean barcodeExists(String barcode) {
+        return barcode.length() > 0 && !barcode.equals(".");
     }
 
 }

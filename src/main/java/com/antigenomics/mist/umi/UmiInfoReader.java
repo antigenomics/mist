@@ -52,7 +52,7 @@ public class UmiInfoReader implements OutputPort<UmiInfo> {
                         new NucleotideSequence(splitLine[1]),
                         new NucleotideSequence(splitLine[2])
                 ),
-                Long.parseLong(splitLine[3]),
+                Integer.parseInt(splitLine[3]),
                 new SequenceQuality(splitLine[4]),
                 new SequenceQuality(splitLine[5]));
     }

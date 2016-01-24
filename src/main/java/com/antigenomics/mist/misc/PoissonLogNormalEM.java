@@ -13,6 +13,7 @@ public class PoissonLogNormalEM {
     private static final double JITTER = 1e-6;
     private final Map<Integer, Element> elements = new HashMap<>();
     private double lambda, mu, sigma, gaussianRatio;
+    private boolean ran;
 
     public PoissonLogNormalEM() {
 
@@ -21,6 +22,7 @@ public class PoissonLogNormalEM {
     public void update(int x) {
         Element element = elements.computeIfAbsent(x, tmp -> new Element(x));
         element.incrementCounter();
+        ran = false;
     }
 
     public void run(int thresholdGuess) {
@@ -102,6 +104,11 @@ public class PoissonLogNormalEM {
             System.out.println("lambda=" + lambda);
             */
         }
+        ran = true;
+    }
+
+    public boolean wasRan() {
+        return ran;
     }
 
     public double estimateThreshold() {
@@ -170,7 +177,6 @@ public class PoissonLogNormalEM {
         public Element(int value) {
             this.value = value;
         }
-
 
         public double getLog2Value() {
             return Math.log(value) / Math.log(2.0);

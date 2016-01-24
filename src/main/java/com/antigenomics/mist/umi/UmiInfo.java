@@ -19,10 +19,10 @@ import com.milaboratory.core.sequence.SequenceQuality;
 
 public class UmiInfo {
     private final UmiTag umiTag;
-    private final long count;
+    private final int count;
     private final SequenceQuality averageQualityLeft, averageQualityRight;
 
-    public UmiInfo(UmiTag umiTag, long count,
+    public UmiInfo(UmiTag umiTag, int count,
                    SequenceQuality averageQualityLeft, SequenceQuality averageQualityRight) {
         this.umiTag = umiTag;
         this.count = count;
@@ -34,7 +34,7 @@ public class UmiInfo {
         return umiTag;
     }
 
-    public long getCount() {
+    public int getCount() {
         return count;
     }
 

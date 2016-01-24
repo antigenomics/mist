@@ -104,4 +104,8 @@ public class PrimerSearcherArray {
 
         return bestResult;
     }
+
+    public int size() {
+        return primerSearchers.size();
+    }
 }

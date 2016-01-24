@@ -15,6 +15,7 @@
 
 package com.antigenomics.mist.preprocess;
 
+import cc.redberry.pipe.InputPort;
 import cc.redberry.pipe.OutputPort;
 import cc.redberry.pipe.blocks.FilteringPort;
 import cc.redberry.pipe.blocks.Merger;
@@ -22,42 +23,30 @@ import cc.redberry.pipe.blocks.ParallelProcessor;
 import cc.redberry.pipe.util.CountingOutputPort;
 import com.antigenomics.mist.misc.Speaker;
 import com.antigenomics.mist.primer.PrimerSearcherResult;
-import com.antigenomics.mist.umi.UmiSetInfo;
 import com.milaboratory.core.io.sequence.SequenceRead;
 import com.milaboratory.core.io.sequence.SequenceReader;
-import com.milaboratory.core.io.sequence.SequenceWriter;
-import com.milaboratory.core.io.sequence.fastq.PairedFastqReader;
-import com.milaboratory.core.io.sequence.fastq.PairedFastqWriter;
-import com.milaboratory.core.io.sequence.fastq.SingleFastqReader;
-import com.milaboratory.core.io.sequence.fastq.SingleFastqWriter;
 
-public class Preprocessor implements Runnable {
+public class Preprocessor<T extends SequenceRead> implements Runnable {
     private static final int INPUT_BUFFER_SIZE = 1024, PROCESSOR_BUFFER_SIZE = 2048;
     private final int threads;
-    private final SequenceReader reader;
-    private final SequenceWriter writer, unmatchedWriter;
-    private final SearchProcessor searchProcessor;
-    private final ReadGroomer readGroomer;
+    private final SequenceReader<T> reader;
+    private final InputPort<T> output, unmatchedOutput;
+    private final SearchProcessor<T> searchProcessor;
+    private final ReadGroomer<T> readGroomer;
 
-    public Preprocessor(SingleFastqReader reader, SingleFastqWriter writer,
-                        SingleFastqWriter unmatchedWriter,
-                        SearchProcessor searchProcessor, ReadGroomer readGroomer,
-                        int threads) {
-        this.reader = reader;
-        this.writer = writer;
-        this.unmatchedWriter = unmatchedWriter;
-        this.searchProcessor = searchProcessor;
-        this.readGroomer = readGroomer;
-        this.threads = threads;
+    @SuppressWarnings("unchecked")
+    public Preprocessor(SequenceReader<T> reader, InputPort<T> output,
+                        SearchProcessor<T> searchProcessor, ReadGroomer<T> readGroomer) {
+        this(reader, output, searchProcessor, readGroomer, null, Runtime.getRuntime().availableProcessors());
     }
 
-    public Preprocessor(PairedFastqReader reader, PairedFastqWriter writer,
-                        PairedFastqWriter unmatchedWriter,
-                        SearchProcessor searchProcessor, ReadGroomer readGroomer,
+    public Preprocessor(SequenceReader<T> reader, InputPort<T> output,
+                        SearchProcessor<T> searchProcessor, ReadGroomer<T> readGroomer,
+                        InputPort<T> unmatchedOutput,
                         int threads) {
         this.reader = reader;
-        this.writer = writer;
-        this.unmatchedWriter = unmatchedWriter;
+        this.output = output;
+        this.unmatchedOutput = unmatchedOutput;
         this.searchProcessor = searchProcessor;
         this.readGroomer = readGroomer;
         this.threads = threads;
@@ -66,11 +55,11 @@ public class Preprocessor implements Runnable {
     @Override
     @SuppressWarnings("unchecked")
     public void run() {
-        final Merger<SequenceRead> bufferedInput = new Merger<>(INPUT_BUFFER_SIZE);
+        final Merger<T> bufferedInput = new Merger<>(INPUT_BUFFER_SIZE);
         bufferedInput.merge(reader);
         bufferedInput.start();
 
-        final CountingOutputPort<SequenceRead> countingInput = new CountingOutputPort<>(bufferedInput);
+        final CountingOutputPort<T> countingInput = new CountingOutputPort<>(bufferedInput);
 
         Thread reporter = new Thread(new Runnable() {
             long prevCount = -1;
@@ -81,17 +70,21 @@ public class Preprocessor implements Runnable {
                     while (!countingInput.isClosed()) {
                         long count = countingInput.getCount();
                         if (prevCount != count) {
-                            Speaker.INSTANCE.sout("Loaded " + countingInput.getCount() + " reads: " +
-                                    searchProcessor.getProcessedReadsCount() + " processed, " +
-                                    searchProcessor.getMatchedReadsCount() + " matched, " +
-                                    (int) (100 * searchProcessor.getForwardOrientationRatio()) + "% forward orientation.");
+                            report();
                             prevCount = count;
                         }
                         Thread.sleep(10000);
                     }
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    report();
                 }
+            }
+
+            private void report() {
+                Speaker.INSTANCE.sout("Loaded " + countingInput.getCount() + " reads: " +
+                        searchProcessor.getProcessedReadsCount() + " processed, " +
+                        searchProcessor.getMatchedReadsCount() + " matched, " +
+                        (int) (100 * searchProcessor.getForwardOrientationRatio()) + "% forward orientation.");
             }
         });
 
@@ -104,24 +97,20 @@ public class Preprocessor implements Runnable {
         final FilteringPort<PrimerSearcherResult> filteredResults = new FilteringPort<>(searchResults,
                 new ResultFilter());
 
-        if (unmatchedWriter != null) {
-            filteredResults.attachDiscardPort(object -> unmatchedWriter.write(object.getReadWrapper().getRead()));
+        if (unmatchedOutput != null) {
+            filteredResults.attachDiscardPort(object -> unmatchedOutput.put((T) object.getReadWrapper().getRead()));
         }
 
-        final OutputPort<SequenceRead> groomedReads = new ParallelProcessor<>(filteredResults,
+        final OutputPort<T> groomedReads = new ParallelProcessor<>(filteredResults,
                 readGroomer, PROCESSOR_BUFFER_SIZE, threads);
 
-        SequenceRead read;
+        T read;
 
         while ((read = groomedReads.take()) != null) {
-            writer.write(read);
+            output.put(read);
         }
 
-        writer.close();
-
-        if (unmatchedWriter != null) {
-            unmatchedWriter.close();
-        }
+        output.put(null);
 
         reporter.interrupt();
     }

@@ -18,16 +18,16 @@ package com.antigenomics.mist.umi;
 import com.antigenomics.mist.misc.AtomicFloatArray;
 import com.milaboratory.core.sequence.SequenceQuality;
 
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class UmiInfoFactory {
     private final UmiTag umiTag;
-    private final AtomicLong counter;
+    private final AtomicInteger counter;
     private final AtomicFloatArray qualitySumLeft, qualitySumRight;
 
     public UmiInfoFactory(UmiTag umiTag, int lengthLeft, int lengthRight) {
         this.umiTag = umiTag;
-        this.counter = new AtomicLong();
+        this.counter = new AtomicInteger();
         this.qualitySumLeft = new AtomicFloatArray(lengthLeft);
         this.qualitySumRight = new AtomicFloatArray(lengthRight);
     }
@@ -52,7 +52,7 @@ public class UmiInfoFactory {
     public UmiInfo create() {
         byte[] dataLeft = new byte[qualitySumLeft.length()],
                 dataRight = new byte[qualitySumRight.length()];
-        long count = counter.get();
+        int count = counter.get();
 
         for (int i = 0; i < qualitySumLeft.length(); i++) {
             dataLeft[i] = (byte) (qualitySumLeft.get(i) / count);
