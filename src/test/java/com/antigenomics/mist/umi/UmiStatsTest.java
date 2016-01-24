@@ -24,6 +24,7 @@ import com.antigenomics.mist.primer.PrimerSearcherArray;
 import com.antigenomics.mist.primer.PrimerSearcherResult;
 import com.milaboratory.core.io.sequence.PairedRead;
 import com.milaboratory.core.io.sequence.fastq.PairedFastqReader;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -61,12 +62,34 @@ public class UmiStatsTest {
 
         PoissonLogNormalEM.PoissonLogNormalModel densityModel = coverageStats.getWeightedDensityModel();
 
-        for (int i = 0; i < 16; i++) {
+        double unweightedError = 0, weightedError = 0,
+                weightedSumHist = 0, weightedSumModel = 0;
+
+        int i = 0;
+        for (; i < UmiCoverageStatistics.MAX_UMI_COVERAGE; i++) {
             int x = (int) Math.pow(2, i);
+            
+            /*
             System.out.println(x + "\t" +
-                    coverageStats.getDensity(x) + "\t" + coverageStats.getWeightedDensity(x) + "\t" +
-                    densityModel.computeLog2HistogramDensity(x) * x
-            );
+                            coverageStats.getDensity(x) + "\t" + coverageStats.getWeightedDensity(x) + "\t" +
+                            densityModel.computeCoverageHistogramDensity(x) + "\t" +
+                            densityModel.computeCoverageHistogramDensityWeighted(x)
+            );*/
+
+            unweightedError += Math.abs(coverageStats.getDensity(x) -
+                    densityModel.computeCoverageHistogramDensity(x));
+            weightedError += Math.abs(coverageStats.getWeightedDensity(x) -
+                    densityModel.computeCoverageHistogramDensityWeighted(x));
+
+            weightedSumModel += densityModel.computeCoverageHistogramDensityWeighted(x);
+
+            if ((weightedSumHist += coverageStats.getWeightedDensity(x)) > 0.95) {
+                break;
+            }
         }
+
+        Assert.assertTrue(unweightedError / i < 0.2);
+        Assert.assertTrue(weightedError / i < 0.05);
+        Assert.assertTrue(weightedSumModel > 0.90);
     }
 }

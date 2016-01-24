@@ -4,6 +4,7 @@ import com.antigenomics.mist.misc.PoissonLogNormalEM;
 
 // non thread-safe
 public class UmiCoverageStatistics {
+    public static final int MAX_UMI_COVERAGE = 65536;
     private final long[] weightedHistogram;
     private final int[] histogram;
     private final int numberOfBins;
@@ -11,12 +12,12 @@ public class UmiCoverageStatistics {
     private int total, totalCoverage;
 
     public UmiCoverageStatistics() {
-        this(65536);
+        this(MAX_UMI_COVERAGE);
     }
 
-    public UmiCoverageStatistics(int maxCount) {
+    public UmiCoverageStatistics(int maxUmiCoverage) {
         this.poissonLogNormalEM = new PoissonLogNormalEM();
-        this.numberOfBins = (int) (Math.log(maxCount) / Math.log(2)) + 1;
+        this.numberOfBins = (int) (Math.log(maxUmiCoverage) / Math.log(2)) + 1;
         this.weightedHistogram = new long[numberOfBins];
         this.histogram = new int[numberOfBins];
         this.total = 0;

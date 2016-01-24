@@ -1,5 +1,6 @@
 package com.antigenomics.mist.misc;
 
+import com.antigenomics.mist.umi.UmiCoverageStatistics;
 import org.apache.commons.math3.distribution.LogNormalDistribution;
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
@@ -149,18 +150,29 @@ public class PoissonLogNormalEM {
         private final double lambda, mu, sigma, logNormalPrior;
         private final LogNormalDistribution logNormalDistribution;
         private final PoissonDistribution poissonDistribution;
-        private final double missingDensity;
+        private double missingDensity = -1, weightedHistogramDensityNorm = -1;
 
         public PoissonLogNormalModel(double poissonMean, double logNormalMean, double logNormalStd, double logNormalPrior) {
             this.lambda = poissonMean;
-            this.mu = Math.log(logNormalMean/Math.sqrt(1.0 + logNormalStd * logNormalStd / logNormalMean / logNormalMean));
+            this.mu = Math.log(logNormalMean / Math.sqrt(1.0 + logNormalStd * logNormalStd / logNormalMean / logNormalMean));
             this.sigma = Math.sqrt(Math.log(1.0 + logNormalStd * logNormalStd / logNormalMean / logNormalMean));
             this.logNormalPrior = logNormalPrior;
             this.logNormalDistribution = new LogNormalDistribution(this.mu, this.sigma + JITTER);
             this.poissonDistribution = new PoissonDistribution(lambda + JITTER);
+        }
 
-            this.missingDensity = logNormalPrior * logNormalDistribution.cumulativeProbability(1) +
-                    (1.0 - logNormalPrior) * poissonDistribution.cumulativeProbability(1);
+        private void computeHistogramNorms() {
+            if (missingDensity < 0) {
+                missingDensity = logNormalPrior * logNormalDistribution.cumulativeProbability(1) +
+                        (1.0 - logNormalPrior) * poissonDistribution.cumulativeProbability(1);
+
+                weightedHistogramDensityNorm = 0;
+
+                for (int i = 0; i < UmiCoverageStatistics.MAX_UMI_COVERAGE; i++) {
+                    int x = (int) Math.pow(2, i);
+                    weightedHistogramDensityNorm += computeCoverageHistogramDensity(x) * x;
+                }
+            }
         }
 
         public double computeLogNormalDensity(int x) {
@@ -175,7 +187,9 @@ public class PoissonLogNormalEM {
             throw new NotImplementedException();
         }
 
-        public double computeLog2HistogramDensity(int x) {
+        public double computeCoverageHistogramDensity(int x) {
+            computeHistogramNorms();
+
             int from = (int) (Math.log(x) / LOG2), to = from + 1;
 
             from = (int) Math.pow(2.0, from);
@@ -185,6 +199,10 @@ public class PoissonLogNormalEM {
                     (1.0 - logNormalPrior) * poissonDistribution.cumulativeProbability(from, to);
 
             return p / (1.0 - missingDensity);
+        }
+
+        public double computeCoverageHistogramDensityWeighted(int x) {
+            return computeCoverageHistogramDensity(x) * x / weightedHistogramDensityNorm;
         }
 
         public double getLambda() {
