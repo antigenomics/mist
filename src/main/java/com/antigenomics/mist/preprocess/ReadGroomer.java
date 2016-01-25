@@ -36,7 +36,9 @@ public abstract class ReadGroomer<T extends SequenceRead> implements Processor<P
         return process(primerSearcherResult.isReversed(),
                 primerSearcherResult.getLeftResult().getTo(),
                 primerSearcherResult.getRightResult().getFrom(),
-                HeaderUtil.generateHeader(primerSearcherResult),
+                HeaderUtil.updateHeader(
+                        primerSearcherResult.getReadWrapper().getRead().getRead(0).getDescription(),
+                        primerSearcherResult),
                 readWrapper);
     }
 }

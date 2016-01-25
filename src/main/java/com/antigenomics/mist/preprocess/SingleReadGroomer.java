@@ -29,15 +29,19 @@ public class SingleReadGroomer extends ReadGroomer<SingleRead> {
     protected SingleRead process(boolean reversed, int from, int to, String newDescription, ReadWrapper readWrapper) {
         NSequenceWithQuality data = readWrapper.getData(0, reversed);
 
+        long readId = readWrapper.getRead().getId();
+
         from = from < 0 ? 0 : from;
         to = to < 0 ? data.size() : to;
 
         if (trim && from < to) { // Need to protect from primer overlap here. By default no trimming for such case.
-            return new SingleReadImpl(readWrapper.getRead().getId(), data.getRange(from, to),
-                    readWrapper.getRead().getRead(0).getDescription() + newDescription);
+            return new SingleReadImpl(readId,
+                    data.getRange(from, to),
+                    newDescription);
         } else {
-            return new SingleReadImpl(readWrapper.getRead().getId(), data,
-                    readWrapper.getRead().getRead(0).getDescription() + newDescription);
+            return new SingleReadImpl(readId,
+                    data,
+                    newDescription);
         }
     }
 }
