@@ -16,7 +16,10 @@
 package com.antigenomics.mist.preprocess;
 
 import com.antigenomics.mist.primer.PrimerSearcherResult;
+import com.antigenomics.mist.umi.UmiTag;
 import com.milaboratory.core.sequence.NSequenceWithQuality;
+import com.milaboratory.core.sequence.NucleotideSequence;
+import com.milaboratory.core.sequence.SequenceQuality;
 
 public class HeaderUtil {
     public static final String TOKEN_SEP = " ",
@@ -25,6 +28,8 @@ public class HeaderUtil {
             UMI_TOKEN = "UMI" + FIELD_SEP;
 
     public static String updateHeader(String description, PrimerSearcherResult primerSearcherResult) {
+        // TODO: check no tokens are present in description
+
         String primerId = primerSearcherResult.getPrimerId();
         NSequenceWithQuality umiNSQ = primerSearcherResult.getLeftResult().getUmi()
                 .concatenate(primerSearcherResult.getRightResult().getUmi());
@@ -39,18 +44,77 @@ public class HeaderUtil {
                 TOKEN_SEP;
     }
 
-    public static String parsePrimerId(String description) {
-        String[] tokens = description.split(PRIMER_ID_TOKEN);
-        return tokens[1].split(TOKEN_SEP)[0];
+    public static String updateHeader(String description, String primerId, NucleotideSequence umi) {
+        return description + TOKEN_SEP + PRIMER_ID_TOKEN +
+                primerId +
+                TOKEN_SEP + UMI_TOKEN +
+                umi.toString() +
+                TOKEN_SEP;
     }
 
-    public static NSequenceWithQuality parseUmiNSQ(String description) {
-        String[] tokens = description.split(UMI_TOKEN);
+    public static ParsedHeader parsedHeader(String description) {
+        return new ParsedHeader(description);
+    }
 
-        String umiString = tokens[1].split(TOKEN_SEP)[0];
+    public static class ParsedHeader {
+        private String rawDescription, primerId;
+        private NucleotideSequence umiSeq;
+        private SequenceQuality umiQual;
 
-        String[] seqAndQual = umiString.split(FIELD_SEP);
+        private ParsedHeader(String description) {
+            String[] tokens = description.split(PRIMER_ID_TOKEN);
 
-        return new NSequenceWithQuality(seqAndQual[0], seqAndQual[1]);
+            this.rawDescription = tokens[0];
+
+            if (tokens.length > 1) {
+                primerId = tokens[1].split(TOKEN_SEP)[0];
+
+                tokens = tokens[1].split(UMI_TOKEN);
+
+                if (tokens.length > 1) {
+                    String umiString = tokens[1].split(TOKEN_SEP)[0];
+
+                    String[] seqAndQual = umiString.split(FIELD_SEP);
+
+                    this.umiSeq = new NucleotideSequence(seqAndQual[0]);
+                    if (seqAndQual.length > 1) {
+                        this.umiQual = new SequenceQuality(seqAndQual[1]);
+                    } else {
+                        this.umiQual = null;
+                    }
+                } else {
+                    this.umiSeq = null;
+                    this.umiQual = null;
+                }
+            } else {
+                this.primerId = null;
+                this.umiSeq = null;
+                this.umiQual = null;
+            }
+        }
+
+        public String getRawDescription() {
+            return rawDescription;
+        }
+
+        public String getPrimerId() {
+            return primerId;
+        }
+
+        public NucleotideSequence getUmiSeq() {
+            return umiSeq;
+        }
+
+        public SequenceQuality getUmiQual() {
+            return umiQual;
+        }
+
+        public UmiTag toUmiTag() {
+            if (primerId == null || umiSeq == null) {
+                throw new RuntimeException("Cannot convert header to UmiTag: some critical fields are missing.");
+            }
+
+            return new UmiTag(primerId, umiSeq);
+        }
     }
 }

@@ -38,7 +38,7 @@ public class UmiTree {
     }
 
     public UmiTree() {
-        this(2, 1.0);
+        this(2, 0.5);
     }
 
     public void update(UmiCoverageAndQuality umiCoverageAndQuality) {
