@@ -21,9 +21,11 @@ import com.milaboratory.core.io.sequence.SequenceRead;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class UmiCorrector<T extends SequenceRead> implements Processor<T, T> {
     protected final Map<String, UmiTree> umiTreeBySample = new HashMap<>();
+    protected final AtomicLong correctedCounter = new AtomicLong();
 
     public UmiCorrector(OutputPort<UmiCoverageAndQuality> input, int maxMismatches,
                         double errorLogOddsRatioThreshold) {
@@ -34,5 +36,13 @@ public abstract class UmiCorrector<T extends SequenceRead> implements Processor<
 
             umiTree.update(umiCoverageAndQuality);
         }
+    }
+
+    public UmiCoverageAndQuality get(UmiTag umiTag) {
+        return umiTreeBySample.get(umiTag.getPrimerId()).get(umiTag.getSequence());
+    }
+
+    public long getCorrectedCount() {
+        return correctedCounter.get();
     }
 }

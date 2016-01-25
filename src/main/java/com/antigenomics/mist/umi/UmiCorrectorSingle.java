@@ -44,6 +44,10 @@ public class UmiCorrectorSingle extends UmiCorrector<SingleRead> {
 
         NucleotideSequence correctedUmi = umiTree.correct(umiTag.getSequence());
 
+        if (!correctedUmi.equals(umiTag.getSequence())) {
+            correctedCounter.incrementAndGet();
+        }
+
         return new SingleReadImpl(input.getId(),
                 input.getData(), HeaderUtil.updateHeader(parsedHeader.getRawDescription(),
                 parsedHeader.getPrimerId(), correctedUmi));

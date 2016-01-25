@@ -43,6 +43,11 @@ public class UmiCorrectorPaired extends UmiCorrector<PairedRead> {
         }
 
         NucleotideSequence correctedUmi = umiTree.correct(umiTag.getSequence());
+        
+        if (!correctedUmi.equals(umiTag.getSequence())) {
+            correctedCounter.incrementAndGet();
+        }
+        
         String newDescription = HeaderUtil.updateHeader(parsedHeader.getRawDescription(),
                 parsedHeader.getPrimerId(), correctedUmi);
 
