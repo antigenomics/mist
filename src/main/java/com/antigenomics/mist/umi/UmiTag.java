@@ -17,7 +17,7 @@ package com.antigenomics.mist.umi;
 
 import com.milaboratory.core.sequence.NucleotideSequence;
 
-public class UmiTag {
+public class UmiTag implements Comparable<UmiTag> {
     private final String primerId;
     private final NucleotideSequence sequence;
 
@@ -47,5 +47,11 @@ public class UmiTag {
     @Override
     public int hashCode() {
         return 31 * primerId.hashCode() + sequence.hashCode();
+    }
+
+    @Override
+    public int compareTo(UmiTag o) {
+        int comp1 = primerId.compareTo(o.primerId);
+        return comp1 == 0 ? sequence.compareTo(o.sequence) : comp1;
     }
 }
