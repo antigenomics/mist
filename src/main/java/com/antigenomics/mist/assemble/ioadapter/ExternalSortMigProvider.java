@@ -30,18 +30,20 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 
 public class ExternalSortMigProvider<T extends SequenceRead> implements MigProvider<T> {
-    private static final int CHUNK_SIZE = 100000, MAX_OPEN_FILES = 10;
-    private final KryoSerializer<SequenceRead> serializer = new KryoSerializer<>(SequenceRead.class);
+    private static final int MAX_OPEN_FILES = 10;
     private final CloseableIterator<SequenceRead> sortedReads;
     private T lastRead = null;
     private UmiTag lastTag = null;
 
-    public ExternalSortMigProvider(SequenceReader<T> reader,
-                                   File tempFile) throws IOException {
-        // TODO: chunk size adjustable
+    public ExternalSortMigProvider(SequenceReader<T> reader) throws IOException {
+        this(reader, File.createTempFile("mist_reads_" + UUID.randomUUID().toString(), ".bin"), 100000);
+    }
 
+    public ExternalSortMigProvider(SequenceReader<T> reader,
+                                   File tempFile, int chunkSize) throws IOException {
         // Serialize to temp file using Kryo
         Kryo kryo = new Kryo();
 
@@ -66,8 +68,9 @@ public class ExternalSortMigProvider<T extends SequenceRead> implements MigProvi
 
 
         // Create the external merge sort instance
+        KryoSerializer<SequenceRead> serializer = new KryoSerializer<>(SequenceRead.class);
         ExternalMergeSort<SequenceRead> sort = ExternalMergeSort.newSorter(serializer, comparator)
-                .withChunkSize(CHUNK_SIZE)
+                .withChunkSize(chunkSize)
                 .withMaxOpenFiles(MAX_OPEN_FILES)
                 .withDistinct(true)
                 .withCleanup(true)

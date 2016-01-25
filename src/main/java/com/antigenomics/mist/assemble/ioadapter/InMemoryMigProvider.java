@@ -24,12 +24,12 @@ import com.milaboratory.core.io.sequence.SequenceReader;
 import java.util.*;
 
 public class InMemoryMigProvider<T extends SequenceRead> implements MigProvider<T> {
-    private final Map<UmiTag, List<T>> readsByTag = new HashMap<>();
     private final Iterator<Map.Entry<UmiTag, List<T>>> iter;
 
     public InMemoryMigProvider(SequenceReader<T> reader) {
         T read;
 
+        Map<UmiTag, List<T>> readsByTag = new HashMap<>();
         while ((read = reader.take()) != null) {
             UmiTag umiTag = HeaderUtil.parsedHeader(read.getRead(0).getDescription()).toUmiTag();
             List<T> reads = readsByTag.computeIfAbsent(umiTag, tmp -> new ArrayList<>());
@@ -45,7 +45,7 @@ public class InMemoryMigProvider<T extends SequenceRead> implements MigProvider<
             return null;
         }
         Map.Entry<UmiTag, List<T>> entry = iter.next();
-        
+
         return new Mig<>(entry.getKey(), entry.getValue());
     }
 }
