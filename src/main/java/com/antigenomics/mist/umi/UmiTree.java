@@ -16,25 +16,88 @@
 package com.antigenomics.mist.umi;
 
 import com.milaboratory.core.sequence.NucleotideSequence;
+import com.milaboratory.core.tree.NeighborhoodIterator;
 import com.milaboratory.core.tree.SequenceTreeMap;
 import com.milaboratory.core.tree.TreeSearchParameters;
+
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.stream.StreamSupport;
 
 public class UmiTree {
     private final SequenceTreeMap<NucleotideSequence, UmiCoverageAndQuality> umiTree =
             new SequenceTreeMap<>(NucleotideSequence.ALPHABET);
     private final TreeSearchParameters treeSearchParameters;
-    private final int depth;
+    private int size;
 
-    public UmiTree(int maxMismatches, int depth) {
+    public UmiTree(int maxMismatches) {
         this.treeSearchParameters = new TreeSearchParameters(maxMismatches, 0, 0);
-        this.depth = depth;
     }
 
     public UmiTree() {
-        this(2, -1);
+        this(2);
     }
 
     public void update(UmiCoverageAndQuality umiCoverageAndQuality) {
-        umiTree.put(umiCoverageAndQuality.getUmiTag().getSequence(), umiCoverageAndQuality);
+        NucleotideSequence umi = umiCoverageAndQuality.getUmiTag().getSequence();
+        if (umiTree.get(umi) != null)
+            throw new IllegalArgumentException("Duplicate UMIs are not allowed.");
+        umiTree.put(umi, umiCoverageAndQuality);
+        size++;
+    }
+
+    public UmiCoverageAndQuality get(NucleotideSequence umi) {
+        return umiTree.get(umi);
+    }
+
+    public void traverseAndCorrect() {
+        StreamSupport.stream(
+                Spliterators.spliterator(umiTree.values().iterator(), size, Spliterator.IMMUTABLE),
+                true
+        ).forEach(this::correct);
+    }
+
+    private void correct(UmiCoverageAndQuality umiCoverageAndQuality) {
+        NeighborhoodIterator<NucleotideSequence, UmiCoverageAndQuality> niter =
+                umiTree.getNeighborhoodIterator(umiCoverageAndQuality.getUmiTag().getSequence(),
+                        treeSearchParameters);
+
+        UmiCoverageAndQuality bestParent = null;
+
+        UmiCoverageAndQuality parent;
+
+        while ((parent = niter.next()) != null) {
+            if (isParent(parent, umiCoverageAndQuality) &&
+                    (bestParent == null || bestParent.getCoverage() < parent.getCoverage())) {
+                bestParent = parent;
+            }
+        }
+
+        if (bestParent != null) {
+            umiCoverageAndQuality.setParent(bestParent.getUmiTag());
+        }
+    }
+
+    private boolean isParent(UmiCoverageAndQuality parent, UmiCoverageAndQuality child) {
+        if (parent.getCoverage() <= child.getCoverage()) {
+            return false;
+        }
+        return false;
+    }
+
+    public NucleotideSequence correct(NucleotideSequence umi) {
+        UmiCoverageAndQuality umiCoverageAndQuality = umiTree.get(umi);
+
+        if (umiCoverageAndQuality == null) {
+            throw new IllegalArgumentException("UMI does not exist in the tree.");
+        }
+
+        NucleotideSequence parent = umi, nextParent;
+
+        while ((nextParent = umiTree.get(parent).getParent().getSequence()) != null) {
+            parent = nextParent;
+        }
+
+        return parent;
     }
 }

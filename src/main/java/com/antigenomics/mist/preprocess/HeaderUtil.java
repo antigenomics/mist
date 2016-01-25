@@ -41,7 +41,6 @@ public class HeaderUtil {
 
     public static String parsePrimerId(String description) {
         String[] tokens = description.split(PRIMER_ID_TOKEN);
-        
         return tokens[1].split(TOKEN_SEP)[0];
     }
 
