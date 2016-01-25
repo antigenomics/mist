@@ -17,6 +17,7 @@ package com.antigenomics.mist.preprocess;
 
 import com.antigenomics.mist.primer.PrimerSearcherResult;
 import com.antigenomics.mist.umi.UmiTag;
+import com.milaboratory.core.io.sequence.SequenceRead;
 import com.milaboratory.core.sequence.NSequenceWithQuality;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.core.sequence.SequenceQuality;
@@ -54,6 +55,10 @@ public class HeaderUtil {
 
     public static ParsedHeader parsedHeader(String description) {
         return new ParsedHeader(description);
+    }
+
+    public static ParsedHeader parsedHeader(SequenceRead read) {
+        return new ParsedHeader(read.getRead(0).getDescription());
     }
 
     public static class ParsedHeader {

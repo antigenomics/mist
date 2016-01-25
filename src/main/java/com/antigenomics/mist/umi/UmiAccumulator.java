@@ -28,14 +28,16 @@ public class UmiAccumulator {
     public UmiAccumulator() {
     }
 
-    public void update(String primerId,
-                       NSequenceWithQuality leftUmi, NSequenceWithQuality rightUmi) {
-        UmiTag umiTag = new UmiTag(primerId, leftUmi.getSequence(), rightUmi.getSequence());
+    public void update(String primerId, NSequenceWithQuality leftUmi, NSequenceWithQuality rightUmi) {
+
+        NSequenceWithQuality umiNSQ = leftUmi.concatenate(rightUmi);
+
+        UmiTag umiTag = new UmiTag(primerId, umiNSQ.getSequence());
 
         UmiCoverageAndQualityFactory umiCoverageAndQualityFactory = umiInfoFactoryMap.computeIfAbsent(umiTag,
-                tmp -> new UmiCoverageAndQualityFactory(umiTag, leftUmi.size(), rightUmi.size()));
+                tmp -> new UmiCoverageAndQualityFactory(umiTag, umiNSQ.size()));
 
-        umiCoverageAndQualityFactory.update(leftUmi.getQuality(), rightUmi.getQuality());
+        umiCoverageAndQualityFactory.update(umiNSQ.getQuality());
     }
 
     public OutputPort<UmiCoverageAndQuality> getUmiInfoProvider() {
