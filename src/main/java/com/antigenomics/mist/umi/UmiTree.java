@@ -28,14 +28,17 @@ public class UmiTree {
     private final SequenceTreeMap<NucleotideSequence, UmiCoverageAndQuality> umiTree =
             new SequenceTreeMap<>(NucleotideSequence.ALPHABET);
     private final TreeSearchParameters treeSearchParameters;
+    private final UmiErrorAndDiversityModel umiErrorAndDiversityModel = new UmiErrorAndDiversityModel();
+    private final double errorLogOddsRatioThreshold;
     private int size;
 
-    public UmiTree(int maxMismatches) {
+    public UmiTree(int maxMismatches, double errorLogOddsRatioThreshold) {
         this.treeSearchParameters = new TreeSearchParameters(maxMismatches, 0, 0);
+        this.errorLogOddsRatioThreshold = errorLogOddsRatioThreshold;
     }
 
     public UmiTree() {
-        this(2);
+        this(2, 1.0);
     }
 
     public void update(UmiCoverageAndQuality umiCoverageAndQuality) {
@@ -43,6 +46,7 @@ public class UmiTree {
         if (umiTree.get(umi) != null)
             throw new IllegalArgumentException("Duplicate UMIs are not allowed.");
         umiTree.put(umi, umiCoverageAndQuality);
+        umiErrorAndDiversityModel.update(umiCoverageAndQuality);
         size++;
     }
 
@@ -79,10 +83,8 @@ public class UmiTree {
     }
 
     private boolean isParent(UmiCoverageAndQuality parent, UmiCoverageAndQuality child) {
-        if (parent.getCoverage() <= child.getCoverage()) {
-            return false;
-        }
-        return false;
+        return parent.getCoverage() > child.getCoverage() && 
+                umiErrorAndDiversityModel.getErrorLogOddsRatio(parent, child) < errorLogOddsRatioThreshold;
     }
 
     public NucleotideSequence correct(NucleotideSequence umi) {
