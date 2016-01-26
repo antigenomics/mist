@@ -63,7 +63,8 @@ public class Assembler<T extends SequenceRead> implements Processor<T, AssemblyR
 
             int offset = querySeq.getRange(flankSize, querySeq.size() - flankSize)
                     .toMotif().getBitapPattern()
-                    .mismatchAndIndelMatcherFirst((int) ((querySeq.size() - 2 * flankSize) * (1.0 - minIdentity)), coreSeq)
+                    .mismatchAndIndelMatcherFirst((int) ((querySeq.size() - 2 * flankSize) * (1.0 - minIdentity)),
+                            coreSeq)
                     .findNext();
 
             if (offset < 0) {
@@ -84,6 +85,14 @@ public class Assembler<T extends SequenceRead> implements Processor<T, AssemblyR
         readsToAssemble.removeAll(discardedReads);
 
         return null;
+    }
+
+    private static int computeQualityMatch(byte q1, byte q2) {
+        return q1 + q1;
+    }
+
+    private static int computeQualityMismatch(byte q1, byte q2) {
+        return Math.min(Math.max(q1, q2), Math.max(Math.abs(q1 - q2), 3));
     }
 
     protected class AssemblyPassResult {
