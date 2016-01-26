@@ -17,28 +17,81 @@ package com.antigenomics.mist.assemble;
 
 import cc.redberry.pipe.Processor;
 import com.milaboratory.core.io.sequence.SequenceRead;
-import com.milaboratory.core.io.sequence.SingleRead;
 import com.milaboratory.core.sequence.NSequenceWithQuality;
 import com.milaboratory.core.sequence.NucleotideSequence;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class Assembler<T extends SequenceRead> implements Processor<T, AssemblyResult<T>> {
+    private final float minIdentity;
+    private final int flankSize;
+
+    public Assembler(float minIdentity, int flankSize) {
+        this.minIdentity = minIdentity;
+        this.flankSize = flankSize;
+    }
+
     @Override
     public AssemblyResult<T> process(T input) {
         return null;
     }
 
     protected AssemblyPassResult assemble(List<T> reads, int index) {
-        Map<NucleotideSequence, Integer>
+        if (reads.isEmpty()) {
+            return null;
+        }
+
+        List<T> sortedReads = new ArrayList<>(reads);
+
+        sortedReads.sort((r1, r2) -> -Integer.compare(r1.getRead(index).getData().size(),
+                r2.getRead(index).getData().size())); // sort reads from longest to shortest
+
+        List<T> readsToAssemble = new ArrayList<>(), discardedReads = new ArrayList<>();
+        List<Integer> offsets = new ArrayList<>();
+
+        Iterator<T> iter = sortedReads.iterator();
+
+        T core = iter.next();
+        readsToAssemble.add(core);
+        NucleotideSequence coreSeq = core.getRead(index).getData().getSequence();
+
+        while (iter.hasNext()) {
+            T read = iter.next();
+            NucleotideSequence querySeq = read.getRead(index).getData().getSequence();
+
+            int offset = querySeq.getRange(flankSize, querySeq.size() - flankSize)
+                    .toMotif().getBitapPattern()
+                    .mismatchAndIndelMatcherFirst((int) ((querySeq.size() - 2 * flankSize) * (1.0 - minIdentity)), coreSeq)
+                    .findNext();
+
+            if (offset < 0) {
+                discardedReads.add(read);
+            } else {
+                readsToAssemble.add(read);
+                offsets.add(offset);
+            }
+        }
+
+        return new AssemblyPassResult(readsToAssemble, discardedReads,
+                assemble(readsToAssemble, offsets, discardedReads));
+    }
+
+    private NSequenceWithQuality assemble(List<T> readsToAssemble, List<Integer> offsets, List<T> discardedReads) {
+        NSequenceWithQuality consensus;
+
+        readsToAssemble.removeAll(discardedReads);
+
+        return null;
     }
 
     protected class AssemblyPassResult {
         private final List<T> assembledReads, discardedReads;
         private final NSequenceWithQuality consensus;
 
-        public AssemblyPassResult(List<T> assembledReads, 
-                                  List<T> discardedReads, 
+        public AssemblyPassResult(List<T> assembledReads,
+                                  List<T> discardedReads,
                                   NSequenceWithQuality consensus) {
             this.assembledReads = assembledReads;
             this.discardedReads = discardedReads;
