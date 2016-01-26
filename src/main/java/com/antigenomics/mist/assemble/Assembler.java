@@ -15,8 +15,46 @@
 
 package com.antigenomics.mist.assemble;
 
-/**
- * Created by mikesh on 1/25/16.
- */
-public class Assembler {
+import cc.redberry.pipe.Processor;
+import com.milaboratory.core.io.sequence.SequenceRead;
+import com.milaboratory.core.io.sequence.SingleRead;
+import com.milaboratory.core.sequence.NSequenceWithQuality;
+import com.milaboratory.core.sequence.NucleotideSequence;
+
+import java.util.List;
+
+public class Assembler<T extends SequenceRead> implements Processor<T, AssemblyResult<T>> {
+    @Override
+    public AssemblyResult<T> process(T input) {
+        return null;
+    }
+
+    protected AssemblyPassResult assemble(List<T> reads, int index) {
+        Map<NucleotideSequence, Integer>
+    }
+
+    protected class AssemblyPassResult {
+        private final List<T> assembledReads, discardedReads;
+        private final NSequenceWithQuality consensus;
+
+        public AssemblyPassResult(List<T> assembledReads, 
+                                  List<T> discardedReads, 
+                                  NSequenceWithQuality consensus) {
+            this.assembledReads = assembledReads;
+            this.discardedReads = discardedReads;
+            this.consensus = consensus;
+        }
+
+        public List<T> getAssembledReads() {
+            return assembledReads;
+        }
+
+        public List<T> getDiscardedReads() {
+            return discardedReads;
+        }
+
+        public NSequenceWithQuality getConsensus() {
+            return consensus;
+        }
+    }
 }

@@ -16,6 +16,7 @@
 package com.antigenomics.mist.preprocess;
 
 import cc.redberry.pipe.Processor;
+import com.antigenomics.mist.misc.HeaderUtil;
 import com.antigenomics.mist.primer.PrimerSearcherResult;
 import com.milaboratory.core.io.sequence.SequenceRead;
 
