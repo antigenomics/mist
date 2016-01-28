@@ -27,7 +27,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class SingleConsensus implements Consensus<SingleRead> {
-    private final Set<SequenceRead> reads;
+    protected final Set<SequenceRead> reads;
     private final NSequenceWithQuality consensusNSQ;
     private final UmiTag umiTag;
     private final int index, clusterId;
@@ -39,20 +39,6 @@ public class SingleConsensus implements Consensus<SingleRead> {
         this.index = index;
         this.clusterId = clusterId;
         this.umiTag = umiTag;
-    }
-
-    int readOverlap(SingleConsensus other) {
-        Set<SequenceRead> set1, set2;
-
-        if (size(index) < other.size(other.index)) {
-            set1 = reads;
-            set2 = other.reads;
-        } else {
-            set1 = other.reads;
-            set2 = reads;
-        }
-
-        return (int) set1.stream().filter(set2::contains).count();
     }
 
     public NSequenceWithQuality getConsensusNSQ() {
