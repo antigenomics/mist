@@ -27,23 +27,42 @@ import com.milaboratory.core.sequence.SequenceQuality;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Assembler<T extends SequenceRead> implements Processor<T, AssemblyResult<T>> {
+public abstract class Assembler<T extends SequenceRead> implements Processor<T, AssemblyResult<T>> {
     public static final int QUAL_SCALE_FACTOR = 10, MAX_CONSEQUENT_MISMATCHES = 3;
 
-    private final float minSimilarity;
-    private final int minAlignmentSize;
+    private final float minSimilarity, maxDiscardedReadsRatio;
+    private final int minAlignmentSize, maxAssemblePasses;
 
-    public Assembler(float minSimilarity, int minAlignmentSize) {
+
+    public Assembler(float minSimilarity, int minAlignmentSize, float maxDiscardedReadsRatio, int maxAssemblePasses) {
+        // todo: check argument ranges
         this.minSimilarity = minSimilarity;
         this.minAlignmentSize = minAlignmentSize;
+        this.maxDiscardedReadsRatio = maxDiscardedReadsRatio;
+        this.maxAssemblePasses = maxAssemblePasses;
     }
 
-    @Override
-    public AssemblyResult<T> process(T input) {
-        return null;
+    protected List<AssemblyPassResult> assemble(List<T> reads, int index) {
+        List<AssemblyPassResult> results = new ArrayList<>();
+
+        AssemblyPassResult previousResult = null;
+
+        for (int i = 0; i < maxAssemblePasses; i++) {
+            AssemblyPassResult result = assemble1(previousResult != null ? previousResult.discardedReads : reads,
+                    index);
+
+            if (result != null && result.isGood()) {
+                results.add(result);
+                previousResult = result;
+            } else {
+                break;
+            }
+        }
+
+        return results;
     }
 
-    protected AssemblyPassResult assemble(List<T> reads, int index) {
+    private AssemblyPassResult assemble1(List<T> reads, int index) {
         if (reads.isEmpty()) {
             return null;
         }
@@ -101,6 +120,7 @@ public class Assembler<T extends SequenceRead> implements Processor<T, AssemblyR
                 mismatches = 0;
                 qualityTemp = new int[consensusSequence.size()];
 
+                // Traverse through aligned positions
                 int prevPosInCons = Integer.MIN_VALUE;
                 for (int pos = alignment.getSequence1Range().getFrom();
                      pos < alignment.getSequence1Range().getTo(); pos++) {
@@ -162,6 +182,10 @@ public class Assembler<T extends SequenceRead> implements Processor<T, AssemblyR
             this.assembledReads = assembledReads;
             this.discardedReads = discardedReads;
             this.consensus = consensus;
+        }
+
+        public boolean isGood() {
+            return discardedReads.size() / (float) (assembledReads.size() + discardedReads.size()) <= maxDiscardedReadsRatio;
         }
 
         public List<T> getAssembledReads() {
