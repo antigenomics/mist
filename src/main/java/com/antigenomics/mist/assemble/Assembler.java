@@ -16,21 +16,26 @@
 package com.antigenomics.mist.assemble;
 
 import cc.redberry.pipe.Processor;
+import com.milaboratory.core.alignment.AffineGapAlignmentScoring;
+import com.milaboratory.core.alignment.Aligner;
+import com.milaboratory.core.alignment.Alignment;
 import com.milaboratory.core.io.sequence.SequenceRead;
 import com.milaboratory.core.sequence.NSequenceWithQuality;
 import com.milaboratory.core.sequence.NucleotideSequence;
+import com.milaboratory.core.sequence.SequenceQuality;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 public class Assembler<T extends SequenceRead> implements Processor<T, AssemblyResult<T>> {
-    private final float minIdentity;
-    private final int flankSize;
+    public static final int QUAL_SCALE_FACTOR = 10, MAX_CONSEQUENT_MISMATCHES = 3;
 
-    public Assembler(float minIdentity, int flankSize) {
-        this.minIdentity = minIdentity;
-        this.flankSize = flankSize;
+    private final float minSimilarity;
+    private final int minAlignmentSize;
+
+    public Assembler(float minSimilarity, int minAlignmentSize) {
+        this.minSimilarity = minSimilarity;
+        this.minAlignmentSize = minAlignmentSize;
     }
 
     @Override
@@ -43,55 +48,107 @@ public class Assembler<T extends SequenceRead> implements Processor<T, AssemblyR
             return null;
         }
 
-        List<T> sortedReads = new ArrayList<>(reads);
+        // Build the consensus by majority vote
 
-        sortedReads.sort((r1, r2) -> -Integer.compare(r1.getRead(index).getData().size(),
-                r2.getRead(index).getData().size())); // sort reads from longest to shortest
+        int size = 0;
 
-        List<T> readsToAssemble = new ArrayList<>(), discardedReads = new ArrayList<>();
-        List<Integer> offsets = new ArrayList<>();
+        for (T read : reads) {
+            size = Math.max(size, read.getRead(index).getData().size());
+        }
 
-        Iterator<T> iter = sortedReads.iterator();
+        ConsensusPwm consensusPwm = new ConsensusPwm(size, index);
 
-        T core = iter.next();
-        readsToAssemble.add(core);
-        NucleotideSequence coreSeq = core.getRead(index).getData().getSequence();
+        reads.forEach(consensusPwm::append);
 
-        while (iter.hasNext()) {
-            T read = iter.next();
-            NucleotideSequence querySeq = read.getRead(index).getData().getSequence();
+        // Re-align all reads
 
-            int offset = querySeq.getRange(flankSize, querySeq.size() - flankSize)
-                    .toMotif().getBitapPattern()
-                    .mismatchAndIndelMatcherFirst((int) ((querySeq.size() - 2 * flankSize) * (1.0 - minIdentity)),
-                            coreSeq)
-                    .findNext();
+        NucleotideSequence consensusSequence = consensusPwm.create();
+        int[] quality = new int[consensusSequence.size()];
+        List<T> assembledReads = new ArrayList<>(),
+                discardedReads = new ArrayList<>();
 
-            if (offset < 0) {
-                discardedReads.add(read);
+        for (T read : reads) {
+            NSequenceWithQuality nsq = read.getRead(index).getData();
+            int[] qualityTemp = new int[consensusSequence.size()];
+            int mismatches = 0, consequentMismatches = 0;
+
+            // Try to align without indels and update quality
+
+            int offset = index > 0 ? (size - nsq.size()) : 0; // anchor left/right
+            for (int i = 0; i < nsq.size(); i++) {
+                if (consensusSequence.codeAt(offset + i) == nsq.getSequence().codeAt(i)) {
+                    consequentMismatches = 0;
+                    qualityTemp[i] = computeQualityMatch(quality[i], nsq.getQuality().value(i));
+                } else {
+                    mismatches++;
+                    if (++consequentMismatches == MAX_CONSEQUENT_MISMATCHES) {
+                        break; // apparently, we've got some indels
+                    }
+                    qualityTemp[i] = computeQualityMismatch(quality[i], nsq.getQuality().value(i));
+                }
+            }
+
+            int alignmentSize;
+
+            // Handle indels appropriately
+
+            if (consequentMismatches == MAX_CONSEQUENT_MISMATCHES) {
+                // Seems we have indels here.. try local alignment
+                Alignment alignment = Aligner.alignLocalAffine(AffineGapAlignmentScoring.getNucleotideBLASTScoring(),
+                        nsq.getSequence(), consensusSequence);
+
+                // Cleanup
+                mismatches = 0;
+                qualityTemp = new int[consensusSequence.size()];
+
+                int prevPosInCons = Integer.MIN_VALUE;
+                for (int pos = alignment.getSequence1Range().getFrom();
+                     pos < alignment.getSequence1Range().getTo(); pos++) {
+                    int posInCons = alignment.convertPosition(pos);
+
+                    if (posInCons >= 0) {
+                        if (nsq.getSequence().codeAt(pos) == consensusSequence.codeAt(posInCons)) {
+                            qualityTemp[posInCons] = computeQualityMatch(quality[posInCons],
+                                    nsq.getQuality().value(pos));
+                        } else if (posInCons == prevPosInCons) { // count insertions only once
+                            mismatches++;
+                            qualityTemp[posInCons] = computeQualityMismatch(quality[posInCons],
+                                    nsq.getQuality().value(pos));
+                        }
+                    } else if (posInCons == prevPosInCons) { // count deletions only once
+                        mismatches++;
+                    }
+                    prevPosInCons = posInCons;
+                }
+                alignmentSize = alignment.getSequence1Range().length();
             } else {
-                readsToAssemble.add(read);
-                offsets.add(offset);
+                alignmentSize = nsq.size();
+            }
+
+            // Check if we want to keep a given read
+
+            if (alignmentSize >= minAlignmentSize && mismatches / (float) alignmentSize >= minSimilarity) {
+                assembledReads.add(read);
+                quality = qualityTemp;
+            } else {
+                discardedReads.add(read);
             }
         }
 
-        return new AssemblyPassResult(readsToAssemble, discardedReads,
-                assemble(readsToAssemble, offsets, discardedReads));
+        byte[] qualityBytes = new byte[consensusSequence.size()];
+        for (int i = 0; i < quality.length; i++) {
+            qualityBytes[i] = (byte) Math.min(Byte.MAX_VALUE, quality[i] / QUAL_SCALE_FACTOR);
+        }
+
+        return new AssemblyPassResult(assembledReads, discardedReads,
+                new NSequenceWithQuality(consensusSequence, new SequenceQuality(qualityBytes)));
     }
 
-    private NSequenceWithQuality assemble(List<T> readsToAssemble, List<Integer> offsets, List<T> discardedReads) {
-        NSequenceWithQuality consensus;
-
-        readsToAssemble.removeAll(discardedReads);
-
-        return null;
+    private static int computeQualityMatch(int q1, byte q2) {
+        return q1 + q2;
     }
 
-    private static int computeQualityMatch(byte q1, byte q2) {
-        return q1 + q1;
-    }
-
-    private static int computeQualityMismatch(byte q1, byte q2) {
+    private static int computeQualityMismatch(int q1, byte q2) {
         return Math.min(Math.max(q1, q2), Math.max(Math.abs(q1 - q2), 3));
     }
 
@@ -117,6 +174,47 @@ public class Assembler<T extends SequenceRead> implements Processor<T, AssemblyR
 
         public NSequenceWithQuality getConsensus() {
             return consensus;
+        }
+    }
+
+    private class ConsensusPwm {
+        private final long[][] pwm;
+        private final int size;
+        private final int index;
+
+        public ConsensusPwm(int size, int index) {
+            this.size = size;
+            this.pwm = new long[4][size];
+            this.index = index;
+        }
+
+        public void append(T read) {
+            append(read.getRead(index).getData());
+        }
+
+        public void append(NSequenceWithQuality nsq) {
+            int offset = index > 0 ? (size - nsq.size()) : 0; // anchor left/right
+            for (int i = 0; i < nsq.size(); i++) {
+                pwm[nsq.getSequence().codeAt(i)][offset + i] += nsq.getQuality().value(i);
+            }
+        }
+
+        public NucleotideSequence create() {
+            byte[] data = new byte[size];
+            for (int i = 0; i < size; i++) {
+                byte maxLetter = 0;
+                long maxScore = 0, score;
+
+                for (byte j = 0; j < 4; j++) {
+                    if ((score = pwm[j][i]) > maxScore) {
+                        maxScore = score;
+                        maxLetter = j;
+                    }
+                }
+
+                data[i] = maxLetter;
+            }
+            return new NucleotideSequence(data);
         }
     }
 }
