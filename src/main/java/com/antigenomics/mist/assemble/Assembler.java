@@ -27,7 +27,7 @@ import com.milaboratory.core.sequence.SequenceQuality;
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class Assembler<T extends SequenceRead> implements Processor<T, AssemblyResult<T>> {
+public abstract class Assembler<T extends SequenceRead> implements Processor<Mig<T>, AssemblyResult<T>> {
     public static final int QUAL_SCALE_FACTOR = 10, MAX_CONSEQUENT_MISMATCHES = 3;
 
     private final float minSimilarity, maxDiscardedReadsRatio;
