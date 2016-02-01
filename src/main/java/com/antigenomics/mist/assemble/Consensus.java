@@ -21,13 +21,13 @@ import com.milaboratory.core.io.sequence.SequenceRead;
 import java.util.List;
 
 public interface Consensus<T extends SequenceRead> {
-    public List<T> getReads();
-    
-    public int size(int index);
+    List<T> getReads();
 
-    public T asRead();
-    
-    public UmiTag getUmiTag();
+    int size(int index);
 
-    public int getClusterId();
+    T asRead();
+
+    UmiTag getUmiTag();
+
+    int getClusterId();
 }

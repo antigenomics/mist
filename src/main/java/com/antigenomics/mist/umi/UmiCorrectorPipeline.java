@@ -22,8 +22,9 @@ import cc.redberry.pipe.blocks.Merger;
 import cc.redberry.pipe.blocks.ParallelProcessor;
 import cc.redberry.pipe.util.CountingOutputPort;
 import cc.redberry.primitives.Filter;
-import com.antigenomics.mist.misc.Speaker;
 import com.antigenomics.mist.misc.HeaderUtil;
+import com.antigenomics.mist.misc.Reporter;
+import com.antigenomics.mist.misc.Speaker;
 import com.milaboratory.core.io.sequence.SequenceRead;
 import com.milaboratory.core.io.sequence.SequenceReader;
 
@@ -47,12 +48,9 @@ public class UmiCorrectorPipeline<T extends SequenceRead> {
 
     public void run() {
         final FilteringPort<T> filteredReads = new FilteringPort<>(reader,
-                new Filter<T>() {
-                    @Override
-                    public boolean accept(T object) {
-                        UmiTag umiTag = HeaderUtil.parsedHeader(object).toUmiTag();
-                        return umiCorrector.get(umiTag).getCoverage() >= umiCoverageThreshold;
-                    }
+                object -> {
+                    UmiTag umiTag = HeaderUtil.parsedHeader(object).toUmiTag();
+                    return umiCorrector.get(umiTag).getCoverage() >= umiCoverageThreshold;
                 });
 
         if (unmatchedOutput != null) {
@@ -66,26 +64,9 @@ public class UmiCorrectorPipeline<T extends SequenceRead> {
 
         final CountingOutputPort<T> countingInput = new CountingOutputPort<>(bufferedInput);
 
-        Thread reporter = new Thread(new Runnable() {
-            long prevCount = -1;
-
+        Thread reporter = new Thread(new Reporter(countingInput) {
             @Override
-            public void run() {
-                try {
-                    while (!countingInput.isClosed()) {
-                        long count = countingInput.getCount();
-                        if (prevCount != count) {
-                            report();
-                            prevCount = count;
-                        }
-                        Thread.sleep(10000);
-                    }
-                } catch (InterruptedException e) {
-                    report();
-                }
-            }
-
-            private void report() {
+            protected void report() {
                 Speaker.INSTANCE.sout("Loaded " + countingInput.getCount() + " reads: " +
                         filteredReads.getTotalCount() + " processed, " +
                         filteredReads.getRejectedCount() + " filtered, " +
