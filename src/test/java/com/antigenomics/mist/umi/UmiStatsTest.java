@@ -64,13 +64,12 @@ public class UmiStatsTest {
 
         System.out.println(coverageStats);
 
-        Assert.assertEquals((int) (log2CoverageMean - 1),
-                coverageStats.getThresholdEstimate());
+        Assert.assertEquals((int) (log2CoverageMean - 1), coverageStats.getThresholdEstimate());
 
         PoissonLogNormalEM.PoissonLogNormalModel densityModel = coverageStats.getWeightedDensityModel();
 
         Assert.assertTrue(Math.abs(densityModel.getLambda() -
-                Math.pow(10, -meanQual / 10) * umiLength * Math.pow(2, log2CoverageMean)) < 1.5);
+                Math.pow(10, -meanQual / 10d) * umiLength * Math.pow(2, log2CoverageMean)) < 0.03);
         Assert.assertTrue(Math.abs(densityModel.getMu() - log2CoverageMean) < 1.5);
     }
 
