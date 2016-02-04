@@ -24,12 +24,56 @@ import com.antigenomics.mist.primer.PrimerSearcherArray;
 import com.antigenomics.mist.primer.PrimerSearcherResult;
 import com.milaboratory.core.io.sequence.PairedRead;
 import com.milaboratory.core.io.sequence.fastq.PairedFastqReader;
+import com.milaboratory.core.sequence.NSequenceWithQuality;
+import com.milaboratory.core.sequence.NucleotideSequence;
+import com.milaboratory.core.sequence.SequenceQuality;
+import org.apache.commons.math3.distribution.NormalDistribution;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
 
 public class UmiStatsTest {
+    @Test
+    public void syntheticTest() {
+        UmiAccumulator umiAccumulator = new UmiAccumulator();
+
+        double log2CoverageMean = 5, log2CoverageStd = 1;
+        NormalDistribution norm = new NormalDistribution(TestUtil.randomGenerator,
+                log2CoverageMean, log2CoverageStd);
+
+        int nUmis = 1000, umiLength = 12;
+        byte meanQual = 35;
+
+        for (int i = 0; i < nUmis; i++) {
+            int count = (int) Math.pow(2, norm.sample());
+
+            NucleotideSequence umiSeq = TestUtil.randomSequence(umiLength);
+            SequenceQuality quality = TestUtil.randomQuality(umiLength, meanQual);
+
+            for (int j = 0; j < count; j++) {
+                umiAccumulator.update("test", TestUtil.mutate(new NSequenceWithQuality(umiSeq, quality)));
+            }
+        }
+
+        UmiStatistics umiStatistics = new UmiStatistics();
+
+        umiStatistics.update(umiAccumulator.getUmiInfoProvider());
+
+        UmiCoverageStatistics coverageStats = umiStatistics.getUmiCoverageStatistics("test");
+
+        System.out.println(coverageStats);
+
+        Assert.assertEquals((int) (log2CoverageMean - 1),
+                coverageStats.getThresholdEstimate());
+
+        PoissonLogNormalEM.PoissonLogNormalModel densityModel = coverageStats.getWeightedDensityModel();
+
+        Assert.assertTrue(Math.abs(densityModel.getLambda() -
+                Math.pow(10, -meanQual / 10) * umiLength * Math.pow(2, log2CoverageMean)) < 1.5);
+        Assert.assertTrue(Math.abs(densityModel.getMu() - log2CoverageMean) < 1.5);
+    }
+
     @SuppressWarnings("unchecked")
     @Test
     public void realDataTest() throws IOException {

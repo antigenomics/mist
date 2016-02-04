@@ -59,7 +59,7 @@ public class UmiCoverageStatistics {
         return getCount(umiCoverage) / total;
     }
 
-    public double getCount(int umiCoverage) {
+    public int getCount(int umiCoverage) {
         return histogram[bin(umiCoverage)];
     }
 
@@ -67,7 +67,7 @@ public class UmiCoverageStatistics {
         return getWeightedCount(umiCoverage) / totalCoverage;
     }
 
-    public double getWeightedCount(int umiCoverage) {
+    public long getWeightedCount(int umiCoverage) {
         return weightedHistogram[bin(umiCoverage)];
     }
 
@@ -77,5 +77,21 @@ public class UmiCoverageStatistics {
 
     public int getTotal() {
         return total;
+    }
+
+    @Override
+    public String toString() {
+        String str = "coverage\tweighted\tunweighted\testimate\n";
+
+        int estimate = (int) (Math.log(getThresholdEstimate()) / Math.log(2));
+
+        for (int i = 0; i <= Math.log(MAX_UMI_COVERAGE) / Math.log(2); i++) {
+            int count = (int) Math.pow(2, i);
+
+            str += count + "\t" + getWeightedCount(count) + "\t" + getCount(count) + "\t" +
+                    (i == estimate ? "*" : " ") + "\n";
+        }
+
+        return str;
     }
 }

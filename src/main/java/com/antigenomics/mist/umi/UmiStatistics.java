@@ -26,13 +26,17 @@ public class UmiStatistics {
     public UmiStatistics() {
     }
 
+    public void update(UmiCoverageAndQuality umiCoverageAndQuality){
+        umiCoverageModelBySample
+                .computeIfAbsent(umiCoverageAndQuality.getUmiTag().getPrimerId(), tmp -> new UmiCoverageStatistics())
+                .update(umiCoverageAndQuality);
+    }
+
     public void update(OutputPort<UmiCoverageAndQuality> umiInfoProvider) {
         UmiCoverageAndQuality umiCoverageAndQuality;
 
         while ((umiCoverageAndQuality = umiInfoProvider.take()) != null) {
-            umiCoverageModelBySample
-                    .computeIfAbsent(umiCoverageAndQuality.getUmiTag().getPrimerId(), tmp -> new UmiCoverageStatistics())
-                    .update(umiCoverageAndQuality);
+            update(umiCoverageAndQuality);
         }
     }
 

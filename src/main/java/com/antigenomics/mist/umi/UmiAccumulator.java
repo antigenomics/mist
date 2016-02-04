@@ -29,9 +29,10 @@ public class UmiAccumulator {
     }
 
     public void update(String primerId, NSequenceWithQuality leftUmi, NSequenceWithQuality rightUmi) {
+        update(primerId, leftUmi.concatenate(rightUmi));
+    }
 
-        NSequenceWithQuality umiNSQ = leftUmi.concatenate(rightUmi);
-
+    public void update(String primerId, NSequenceWithQuality umiNSQ) {
         UmiTag umiTag = new UmiTag(primerId, umiNSQ.getSequence());
 
         UmiCoverageAndQualityFactory umiCoverageAndQualityFactory = umiInfoFactoryMap.computeIfAbsent(umiTag,

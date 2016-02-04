@@ -80,4 +80,23 @@ public class UmiErrorAndDiversityModel {
         return new BinomialDistribution(parent.getCoverage() + child.getCoverage(), Math.pow(10, logProb))
                 .cumulativeProbability(child.getCoverage());
     }
+
+    public double computeDiversity() {
+        double entropy = 0;
+
+        for (int i = 0; i < MAX_UMI_LEN; i++) {
+            double partialEntropy = 0, sum = 0;
+            for (int j = 0; j < 4; j++) {
+                sum += pwm[i][j];
+                partialEntropy += pwm[i][j] == 0 ? 0 : pwm[i][j] * Math.log10(pwm[i][j]);
+            }
+            if (sum > 0){
+                partialEntropy /= sum;
+                partialEntropy -= Math.log10(sum);
+            }
+            entropy -= partialEntropy;
+        }
+
+        return Math.pow(10, entropy);
+    }
 }
