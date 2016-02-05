@@ -23,8 +23,8 @@ import com.milaboratory.core.sequence.NucleotideSequence;
 
 public class UmiCorrectorPaired extends UmiCorrector<PairedRead> {
     public UmiCorrectorPaired(OutputPort<UmiCoverageAndQuality> input,
-                              int maxMismatches, double errorLogOddsRatioThreshold) {
-        super(input, maxMismatches, errorLogOddsRatioThreshold);
+                              int maxMismatches, double errorPvalueThreshold, double independentAssemblyFdrThreshold) {
+        super(input, maxMismatches, errorPvalueThreshold, independentAssemblyFdrThreshold);
     }
 
     @Override
@@ -43,11 +43,11 @@ public class UmiCorrectorPaired extends UmiCorrector<PairedRead> {
         }
 
         NucleotideSequence correctedUmi = umiTree.correct(umiTag.getSequence());
-        
+
         if (!correctedUmi.equals(umiTag.getSequence())) {
             correctedCounter.incrementAndGet();
         }
-        
+
         String newDescription = HeaderUtil.updateHeader(parsedHeader.getRawDescription(),
                 parsedHeader.getPrimerId(), correctedUmi);
 

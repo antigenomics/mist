@@ -48,4 +48,9 @@ public class UmiTag {
     public int hashCode() {
         return 31 * primerId.hashCode() + sequence.hashCode();
     }
+
+    @Override
+    public String toString() {
+        return primerId + ":" + sequence.toString();
+    }
 }

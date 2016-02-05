@@ -15,6 +15,7 @@
 
 package com.antigenomics.mist.umi;
 
+import cc.redberry.pipe.OutputPort;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.core.sequence.SequenceQuality;
 import org.apache.commons.math3.distribution.BinomialDistribution;
@@ -25,7 +26,6 @@ public class UmiErrorAndDiversityModel {
     private int total;
 
     public UmiErrorAndDiversityModel() {
-
 
     }
 
@@ -40,17 +40,18 @@ public class UmiErrorAndDiversityModel {
         total += coverage;
     }
 
-    public double getErrorLogOddsRatio(UmiCoverageAndQuality parent, UmiCoverageAndQuality child) {
-        return Math.log10(errorProbability(parent, child)) -
-                Math.log10(independentAssemblyProbability(parent, child));
+    public void update(OutputPort<UmiCoverageAndQuality> umiInfoProvider) {
+        UmiCoverageAndQuality umiCoverageAndQuality;
 
+        while ((umiCoverageAndQuality = umiInfoProvider.take()) != null) {
+            update(umiCoverageAndQuality);
+        }
     }
 
-    public double independentAssemblyProbability(UmiCoverageAndQuality parent, UmiCoverageAndQuality child) {
+    public double independentAssemblyProbability(NucleotideSequence parentUmi, NucleotideSequence childUmi) {
         double prob = 1.0;
 
-        NucleotideSequence parentUmi = parent.getUmiTag().getSequence(),
-                childUmi = child.getUmiTag().getSequence();
+        assert parentUmi.size() == childUmi.size();
 
         for (int i = 0; i < parentUmi.size(); i++) {
             byte code = parentUmi.codeAt(i);
@@ -63,7 +64,11 @@ public class UmiErrorAndDiversityModel {
         return prob;
     }
 
-    public double errorProbability(UmiCoverageAndQuality parent, UmiCoverageAndQuality child) {
+    public double independentAssemblyProbability(UmiCoverageAndQuality parent, UmiCoverageAndQuality child) {
+        return independentAssemblyProbability(parent.getUmiTag().getSequence(), child.getUmiTag().getSequence());
+    }
+
+    public double errorPValue(UmiCoverageAndQuality parent, UmiCoverageAndQuality child) {
         double logProb = 0.0;
 
         NucleotideSequence parentUmi = parent.getUmiTag().getSequence(),
@@ -77,8 +82,11 @@ public class UmiErrorAndDiversityModel {
             }
         }
 
-        return new BinomialDistribution(parent.getCoverage() + child.getCoverage(), Math.pow(10, logProb))
-                .cumulativeProbability(child.getCoverage());
+        BinomialDistribution binomialDistribution = new BinomialDistribution(parent.getCoverage() + child.getCoverage(),
+                Math.pow(10, logProb));
+
+        return 1.0 - binomialDistribution.cumulativeProbability(child.getCoverage()) +
+                0.5 * binomialDistribution.probability(child.getCoverage());
     }
 
     public double computeDiversity() {
@@ -90,7 +98,7 @@ public class UmiErrorAndDiversityModel {
                 sum += pwm[i][j];
                 partialEntropy += pwm[i][j] == 0 ? 0 : pwm[i][j] * Math.log10(pwm[i][j]);
             }
-            if (sum > 0){
+            if (sum > 0) {
                 partialEntropy /= sum;
                 partialEntropy -= Math.log10(sum);
             }

@@ -23,8 +23,8 @@ import com.milaboratory.core.sequence.NucleotideSequence;
 
 public class UmiCorrectorSingle extends UmiCorrector<SingleRead> {
     public UmiCorrectorSingle(OutputPort<UmiCoverageAndQuality> input,
-                              int maxMismatches, double errorLogOddsRatioThreshold) {
-        super(input, maxMismatches, errorLogOddsRatioThreshold);
+                              int maxMismatches, double errorPvalueThreshold, double independentAssemblyFdrThreshold) {
+        super(input, maxMismatches, errorPvalueThreshold, independentAssemblyFdrThreshold);
     }
 
     @Override

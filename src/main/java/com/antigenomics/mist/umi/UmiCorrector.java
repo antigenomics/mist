@@ -27,12 +27,21 @@ public abstract class UmiCorrector<T extends SequenceRead> implements Processor<
     protected final Map<String, UmiTree> umiTreeBySample = new HashMap<>();
     protected final AtomicLong correctedCounter = new AtomicLong();
 
-    public UmiCorrector(OutputPort<UmiCoverageAndQuality> input, int maxMismatches,
-                        double errorLogOddsRatioThreshold) {
+    public UmiCorrector(OutputPort<UmiCoverageAndQuality> input,
+                         int maxMismatches,
+                        double errorPvalueThreshold, double independentAssemblyFdrThreshold) {
         UmiCoverageAndQuality umiCoverageAndQuality;
+
+        // TODO: UMI histogram stuff goes here!
+        // TODO: in process() - if failed to find a parent using probabilistic model filter if below threshold
+
+
+        int numberOfUmis = -1;
+
         while ((umiCoverageAndQuality = input.take()) != null) {
             UmiTree umiTree = umiTreeBySample.computeIfAbsent(umiCoverageAndQuality.getUmiTag().getPrimerId(),
-                    tmp -> new UmiTree(maxMismatches, errorLogOddsRatioThreshold));
+                    tmp -> new UmiTree(numberOfUmis, maxMismatches,
+                            errorPvalueThreshold, independentAssemblyFdrThreshold));
 
             umiTree.update(umiCoverageAndQuality);
         }

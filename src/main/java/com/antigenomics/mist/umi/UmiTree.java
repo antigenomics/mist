@@ -15,6 +15,7 @@
 
 package com.antigenomics.mist.umi;
 
+import cc.redberry.pipe.OutputPort;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.core.tree.NeighborhoodIterator;
 import com.milaboratory.core.tree.SequenceTreeMap;
@@ -29,16 +30,21 @@ public class UmiTree {
             new SequenceTreeMap<>(NucleotideSequence.ALPHABET);
     private final TreeSearchParameters treeSearchParameters;
     private final UmiErrorAndDiversityModel umiErrorAndDiversityModel = new UmiErrorAndDiversityModel();
-    private final double errorLogOddsRatioThreshold;
+    private final double errorPvalueThreshold;
+    private final double independentAssemblyFdrThreshold;
+    private final int observedDiversityEstimate;
     private int size;
 
-    public UmiTree(int maxMismatches, double errorLogOddsRatioThreshold) {
+    public UmiTree(int observedDiversityEstimate, int maxMismatches,
+                   double errorPvalueThreshold, double independentAssemblyFdrThreshold) {
+        this.observedDiversityEstimate = observedDiversityEstimate;
         this.treeSearchParameters = new TreeSearchParameters(maxMismatches, 0, 0);
-        this.errorLogOddsRatioThreshold = errorLogOddsRatioThreshold;
+        this.errorPvalueThreshold = errorPvalueThreshold;
+        this.independentAssemblyFdrThreshold = independentAssemblyFdrThreshold;
     }
 
-    public UmiTree() {
-        this(2, 0.5);
+    public UmiTree(int observedDiversityEstimate) {
+        this(observedDiversityEstimate, 1, 0.05, 0.1);
     }
 
     public void update(UmiCoverageAndQuality umiCoverageAndQuality) {
@@ -48,6 +54,14 @@ public class UmiTree {
         umiTree.put(umi, umiCoverageAndQuality);
         umiErrorAndDiversityModel.update(umiCoverageAndQuality);
         size++;
+    }
+
+    public void update(OutputPort<UmiCoverageAndQuality> umiInfoProvider) {
+        UmiCoverageAndQuality umiCoverageAndQuality;
+
+        while ((umiCoverageAndQuality = umiInfoProvider.take()) != null) {
+            update(umiCoverageAndQuality);
+        }
     }
 
     public UmiCoverageAndQuality get(NucleotideSequence umi) {
@@ -71,7 +85,8 @@ public class UmiTree {
         UmiCoverageAndQuality parent;
 
         while ((parent = niter.next()) != null) {
-            if (isParent(parent, umiCoverageAndQuality) &&
+            if (parent != umiCoverageAndQuality &&
+                    isParent(parent, umiCoverageAndQuality) &&
                     (bestParent == null || bestParent.getCoverage() < parent.getCoverage())) {
                 bestParent = parent;
             }
@@ -83,8 +98,9 @@ public class UmiTree {
     }
 
     private boolean isParent(UmiCoverageAndQuality parent, UmiCoverageAndQuality child) {
-        return parent.getCoverage() > child.getCoverage() && 
-                umiErrorAndDiversityModel.getErrorLogOddsRatio(parent, child) < errorLogOddsRatioThreshold;
+        return parent.getCoverage() > child.getCoverage() &&
+                (umiErrorAndDiversityModel.independentAssemblyProbability(parent, child) * observedDiversityEstimate <= independentAssemblyFdrThreshold ||
+                        umiErrorAndDiversityModel.errorPValue(parent, child) <= errorPvalueThreshold);
     }
 
     public NucleotideSequence correct(NucleotideSequence umi) {
@@ -94,10 +110,11 @@ public class UmiTree {
             throw new IllegalArgumentException("UMI does not exist in the tree.");
         }
 
-        NucleotideSequence parent = umi, nextParent;
+        NucleotideSequence parent = umi;
+        UmiTag nextParent;
 
-        while ((nextParent = umiTree.get(parent).getParent().getSequence()) != null) {
-            parent = nextParent;
+        while ((nextParent = umiTree.get(parent).getParent()) != null) {
+            parent = nextParent.getSequence();
         }
 
         return parent;

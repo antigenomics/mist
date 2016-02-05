@@ -41,6 +41,18 @@ public class UmiAccumulator {
         umiCoverageAndQualityFactory.update(umiNSQ.getQuality());
     }
 
+    public UmiCoverageAndQuality getAt(UmiTag umiTag) {
+        if (!umiInfoFactoryMap.containsKey(umiTag)) {
+            throw new IllegalArgumentException("Tag " + umiTag + " is not in the accumulator.");
+        }
+
+        return umiInfoFactoryMap.get(umiTag).create();
+    }
+
+    public int size() {
+        return umiInfoFactoryMap.size();
+    }
+
     public OutputPort<UmiCoverageAndQuality> getUmiInfoProvider() {
         return new UmiInfoProvider();
     }
