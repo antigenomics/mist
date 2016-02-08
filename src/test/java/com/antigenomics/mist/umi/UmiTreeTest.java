@@ -1,5 +1,6 @@
 package com.antigenomics.mist.umi;
 
+import cc.redberry.pipe.CUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -57,14 +58,14 @@ public class UmiTreeTest {
         }
     }
 
-    private TestResult test(int umiLen, byte meanQual, int numberOfUmis, double log2CoverageMean) {
+    private TestResult test(int umiLen, byte meanQual, int numberOfUmis, double log2CoverageMean) throws InterruptedException {
 
         SyntheticUmiStats syntheticUmiStats = new SyntheticUmiStats(numberOfUmis, umiLen, meanQual,
                 log2CoverageMean, 1.0);
 
         UmiTree umiTree = new UmiTree(numberOfUmis);
 
-        umiTree.put(syntheticUmiStats.getUmiAccumulator().getUmiInfoProvider());
+        CUtils.drain(syntheticUmiStats.getUmiAccumulator().getOutputPort(), umiTree);
 
         umiTree.traverseAndCorrect();
 

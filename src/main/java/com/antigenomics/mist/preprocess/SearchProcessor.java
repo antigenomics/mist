@@ -47,7 +47,7 @@ public class SearchProcessor<T extends SequenceRead> implements Processor<T, Pri
 
             if (result.getLeftResult().getUmi().size() +
                     result.getRightResult().getUmi().size() > 0) {
-                umiAccumulator.update(result.getPrimerId(),
+                umiAccumulator.put(result.getPrimerId(),
                         result.getLeftResult().getUmi(),
                         result.getRightResult().getUmi());
             }

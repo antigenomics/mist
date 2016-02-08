@@ -31,9 +31,8 @@ public class UmiTree implements InputPort<UmiCoverageAndQuality> {
             new SequenceTreeMap<>(NucleotideSequence.ALPHABET);
     private final TreeSearchParameters treeSearchParameters;
     private final UmiErrorAndDiversityModel umiErrorAndDiversityModel = new UmiErrorAndDiversityModel();
-    private final double errorPvalueThreshold;
-    private final double independentAssemblyFdrThreshold;
-    private final int observedDiversityEstimate;
+    private double errorPvalueThreshold, independentAssemblyFdrThreshold;
+    private int observedDiversityEstimate;
     private int size, correctedCount = 0, correctedByErrorFreqCount = 0, correctedByAssemblyProbCount = 0;
 
     public UmiTree(int observedDiversityEstimate, int maxMismatches,
@@ -48,6 +47,10 @@ public class UmiTree implements InputPort<UmiCoverageAndQuality> {
         this(observedDiversityEstimate, 1, 0.05, 0.1);
     }
 
+    public UmiTree() {
+        this(-1, 1, 0.05, 0.1);
+    }
+
     @Override
     public void put(UmiCoverageAndQuality umiCoverageAndQuality) {
         NucleotideSequence umi = umiCoverageAndQuality.getUmiTag().getSequence();
@@ -55,16 +58,8 @@ public class UmiTree implements InputPort<UmiCoverageAndQuality> {
             throw new IllegalArgumentException("Duplicate UMIs are not allowed.");
         }
         umiTree.put(umi, umiCoverageAndQuality);
-        umiErrorAndDiversityModel.update(umiCoverageAndQuality);
+        umiErrorAndDiversityModel.put(umiCoverageAndQuality);
         size++;
-    }
-
-    public void put(OutputPort<UmiCoverageAndQuality> umiInfoProvider) {
-        UmiCoverageAndQuality umiCoverageAndQuality;
-
-        while ((umiCoverageAndQuality = umiInfoProvider.take()) != null) {
-            put(umiCoverageAndQuality);
-        }
     }
 
     public UmiCoverageAndQuality get(NucleotideSequence umi) {
@@ -107,7 +102,7 @@ public class UmiTree implements InputPort<UmiCoverageAndQuality> {
 
     private boolean isGood(UmiCoverageAndQuality parent, UmiCoverageAndQuality child) {
         boolean correctedByAssemblyProb = umiErrorAndDiversityModel.independentAssemblyProbability(parent, child) *
-                observedDiversityEstimate <= independentAssemblyFdrThreshold,
+                (observedDiversityEstimate < 0 ? size : observedDiversityEstimate) <= independentAssemblyFdrThreshold,
                 correctedByErrorFreq = umiErrorAndDiversityModel.errorPValue(parent, child) <= errorPvalueThreshold;
 
         if (correctedByAssemblyProb) {
@@ -152,5 +147,29 @@ public class UmiTree implements InputPort<UmiCoverageAndQuality> {
 
     public int getCorrectedByAssemblyProbCount() {
         return correctedByAssemblyProbCount;
+    }
+
+    public double getErrorPvalueThreshold() {
+        return errorPvalueThreshold;
+    }
+
+    public double getIndependentAssemblyFdrThreshold() {
+        return independentAssemblyFdrThreshold;
+    }
+
+    public int getObservedDiversityEstimate() {
+        return observedDiversityEstimate;
+    }
+
+    public void setObservedDiversityEstimate(int observedDiversityEstimate) {
+        this.observedDiversityEstimate = observedDiversityEstimate;
+    }
+
+    public void setIndependentAssemblyFdrThreshold(double independentAssemblyFdrThreshold) {
+        this.independentAssemblyFdrThreshold = independentAssemblyFdrThreshold;
+    }
+
+    public void setErrorPvalueThreshold(double errorPvalueThreshold) {
+        this.errorPvalueThreshold = errorPvalueThreshold;
     }
 }

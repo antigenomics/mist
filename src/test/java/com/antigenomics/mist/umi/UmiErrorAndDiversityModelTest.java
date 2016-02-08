@@ -22,13 +22,13 @@ public class UmiErrorAndDiversityModelTest {
         for (int i = 0; i < numberOfUmis; i++) {
             NucleotideSequence umi = TestUtil.randomSequence(size);
 
-            umiErrorAndDiversityModel.update(new UmiCoverageAndQuality(new UmiTag("test", umi),
+            umiErrorAndDiversityModel.put(new UmiCoverageAndQuality(new UmiTag("test", umi),
                     1, new SequenceQuality(quality)));
         }
 
         double expectedDiversity = Math.pow(4, size);
 
-        Assert.assertTrue(Math.abs(expectedDiversity - umiErrorAndDiversityModel.computeDiversity())
+        Assert.assertTrue(Math.abs(expectedDiversity - umiErrorAndDiversityModel.computeExpectedDiversity())
                 / expectedDiversity < 0.01);
     }
 

@@ -15,12 +15,13 @@
 
 package com.antigenomics.mist.umi;
 
+import cc.redberry.pipe.InputPort;
 import cc.redberry.pipe.OutputPort;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.core.sequence.SequenceQuality;
 import org.apache.commons.math3.distribution.BinomialDistribution;
 
-public class UmiErrorAndDiversityModel {
+public class UmiErrorAndDiversityModel implements InputPort<UmiCoverageAndQuality> {
     private final static int MAX_UMI_LEN = 256;
     private final double[][] pwm = new double[MAX_UMI_LEN][4];
     private int total;
@@ -29,7 +30,7 @@ public class UmiErrorAndDiversityModel {
 
     }
 
-    public void update(UmiCoverageAndQuality umiCoverageAndQuality) {
+    public void put(UmiCoverageAndQuality umiCoverageAndQuality) {
         NucleotideSequence umi = umiCoverageAndQuality.getUmiTag().getSequence();
         int coverage = umiCoverageAndQuality.getCoverage();
 
@@ -40,11 +41,11 @@ public class UmiErrorAndDiversityModel {
         total += coverage;
     }
 
-    public void update(OutputPort<UmiCoverageAndQuality> umiInfoProvider) {
+    public void put(OutputPort<UmiCoverageAndQuality> umiInfoProvider) {
         UmiCoverageAndQuality umiCoverageAndQuality;
 
         while ((umiCoverageAndQuality = umiInfoProvider.take()) != null) {
-            update(umiCoverageAndQuality);
+            put(umiCoverageAndQuality);
         }
     }
 
@@ -89,7 +90,7 @@ public class UmiErrorAndDiversityModel {
                 0.5 * binomialDistribution.probability(child.getCoverage());
     }
 
-    public double computeDiversity() {
+    public double computeExpectedDiversity() {
         double entropy = 0;
 
         for (int i = 0; i < MAX_UMI_LEN; i++) {

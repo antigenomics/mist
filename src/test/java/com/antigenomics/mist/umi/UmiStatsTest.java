@@ -15,6 +15,7 @@
 
 package com.antigenomics.mist.umi;
 
+import cc.redberry.pipe.CUtils;
 import cc.redberry.pipe.blocks.ParallelProcessor;
 import com.antigenomics.mist.TestUtil;
 import com.antigenomics.mist.misc.PoissonLogNormalEM;
@@ -50,7 +51,7 @@ public class UmiStatsTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void realDataTest() throws IOException {
+    public void realDataTest() throws IOException, InterruptedException {
         PrimerSearcherArray primerSearcherArray = TestUtil.readBarcodes("umi_barcodes.txt");
 
         SearchProcessor searchProcessor = new SearchProcessor(
@@ -70,11 +71,9 @@ public class UmiStatsTest {
 
         }
 
-        UmiStatistics umiStatistics = new UmiStatistics();
+        UmiCoverageStatistics coverageStats = new UmiCoverageStatistics();
 
-        umiStatistics.update(searchProcessor.getUmiAccumulator().getUmiInfoProvider());
-
-        UmiCoverageStatistics coverageStats = umiStatistics.getUmiCoverageStatistics(primerSearcherArray.getSampleIds().get(0));
+        CUtils.drain(searchProcessor.getUmiAccumulator().getOutputPort(), coverageStats);
 
         System.out.println("threshold=" + coverageStats.getThresholdEstimate());
 

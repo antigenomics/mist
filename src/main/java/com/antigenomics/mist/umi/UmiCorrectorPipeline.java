@@ -47,12 +47,9 @@ public class UmiCorrectorPipeline<T extends SequenceRead> {
 
     public void run() {
         final FilteringPort<T> filteredReads = new FilteringPort<>(reader,
-                new Filter<T>() {
-                    @Override
-                    public boolean accept(T object) {
-                        UmiTag umiTag = HeaderUtil.parsedHeader(object).toUmiTag();
-                        return umiCorrector.get(umiTag).getCoverage() >= umiCoverageThreshold;
-                    }
+                object -> {
+                    UmiTag umiTag = HeaderUtil.parsedHeader(object).toUmiTag();
+                    return umiCorrector.get(umiTag).getCoverage() >= umiCoverageThreshold;
                 });
 
         if (unmatchedOutput != null) {

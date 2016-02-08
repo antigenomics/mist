@@ -1,6 +1,5 @@
 package com.antigenomics.mist.umi;
 
-import cc.redberry.pipe.CUtils;
 import com.antigenomics.mist.TestUtil;
 import com.milaboratory.core.sequence.NSequenceWithQuality;
 import com.milaboratory.core.sequence.NucleotideSequence;
@@ -30,6 +29,7 @@ public class SyntheticUmiStats {
         this.reads = new ArrayList<>();
         this.umiAccumulator = new UmiAccumulator();
         this.umiErrorAndDiversityModel = new UmiErrorAndDiversityModel();
+        this.umiCoverageStatistics = new UmiCoverageStatistics();
         this.umis = new ArrayList<>();
 
         NormalDistribution norm = new NormalDistribution(TestUtil.randomGenerator,
@@ -44,20 +44,16 @@ public class SyntheticUmiStats {
 
             for (int j = 0; j < count; j++) {
                 NSequenceWithQuality read = TestUtil.mutate(new NSequenceWithQuality(umiSeq, quality));
-                umiAccumulator.update("test", read);
+                umiAccumulator.put(read);
                 reads.add(new UmiParentChildPair(umiSeq, read));
             }
         }
 
-        UmiCoverageStatistics umiCoverageStatistics = new UmiCoverageStatistics();
-
-        umiCoverageStatistics.put(umiAccumulator.getUmiInfoProvider());
-
-        CUtils.drain();
-
-        this.umiCoverageStatistics = umiStatistics.getUmiCoverageStatistics("test");
-
-        umiErrorAndDiversityModel.update(umiAccumulator.getUmiInfoProvider());
+        UmiCoverageAndQuality umiCoverageAndQuality;
+        while ((umiCoverageAndQuality = umiAccumulator.getOutputPort().take()) != null) {
+            umiCoverageStatistics.put(umiCoverageAndQuality);
+            umiErrorAndDiversityModel.put(umiCoverageAndQuality);
+        }
     }
 
     public int getNumberOfUmis() {
@@ -123,11 +119,11 @@ public class SyntheticUmiStats {
 
 
         public UmiCoverageAndQuality getParentCoverageAndQuality() {
-            return umiAccumulator.getAt(new UmiTag("test", parent));
+            return umiAccumulator.getAt(new UmiTag(parent));
         }
 
         public UmiCoverageAndQuality getChildCoverageAndQuality() {
-            return umiAccumulator.getAt(new UmiTag("test", child.getSequence()));
+            return umiAccumulator.getAt(new UmiTag(child.getSequence()));
         }
     }
 }

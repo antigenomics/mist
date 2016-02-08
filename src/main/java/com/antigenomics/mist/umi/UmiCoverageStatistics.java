@@ -4,7 +4,7 @@ import cc.redberry.pipe.InputPort;
 import com.antigenomics.mist.misc.PoissonLogNormalEM;
 
 // non thread-safe
-public class UmiCoverageStatistics implements InputPort<UmiCoverageAndQuality>{
+public class UmiCoverageStatistics implements InputPort<UmiCoverageAndQuality> {
     public static final int MAX_UMI_COVERAGE = 65536;
     private final long[] weightedHistogram;
     private final int[] histogram;
@@ -55,6 +55,20 @@ public class UmiCoverageStatistics implements InputPort<UmiCoverageAndQuality>{
         }
 
         return (int) Math.pow(2, indexOfMax / 2);
+    }
+
+    /**
+     * TODO
+     * @return
+     * @deprecated Use a more robust method to estimate diversity
+     */
+    @Deprecated
+    public int getObservedDiversityEstimate() {
+        int observedDiversity = 0;
+        for (int i = getThresholdEstimate(); i < numberOfBins; i++) {
+            observedDiversity += histogram[i];
+        }
+        return observedDiversity;
     }
 
     public double getDensity(int umiCoverage) {

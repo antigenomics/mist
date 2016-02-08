@@ -15,43 +15,76 @@
 
 package com.antigenomics.mist.umi;
 
+import cc.redberry.pipe.InputPort;
 import cc.redberry.pipe.OutputPort;
 import cc.redberry.pipe.Processor;
 import com.milaboratory.core.io.sequence.SequenceRead;
+import com.milaboratory.core.sequence.NucleotideSequence;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class UmiCorrector<T extends SequenceRead> implements Processor<T, T> {
-    protected final Map<String, UmiTree> umiTreeBySample = new HashMap<>();
+    protected final Map<String, CorrectorStatistics> correctorStatisticsBySample = new HashMap<>();
     protected final AtomicLong correctedCounter = new AtomicLong();
 
+    protected final int maxMismatches;
+    protected double errorPvalueThreshold, independentAssemblyFdrThreshold;
+
     public UmiCorrector(OutputPort<UmiCoverageAndQuality> input,
-                         int maxMismatches,
-                        double errorPvalueThreshold, double independentAssemblyFdrThreshold) {
+                        int maxMismatches, double errorPvalueThreshold, double independentAssemblyFdrThreshold) {
+        this.maxMismatches = maxMismatches;
+        this.errorPvalueThreshold = errorPvalueThreshold;
+        this.independentAssemblyFdrThreshold = independentAssemblyFdrThreshold;
+
         UmiCoverageAndQuality umiCoverageAndQuality;
 
         // TODO: UMI histogram stuff goes here!
         // TODO: in process() - if failed to find a parent using probabilistic model filter if below threshold
 
-
-        int numberOfUmis = -1;
-
         while ((umiCoverageAndQuality = input.take()) != null) {
-            UmiTree umiTree = umiTreeBySample.computeIfAbsent(umiCoverageAndQuality.getUmiTag().getPrimerId(),
-                    tmp -> new UmiTree(numberOfUmis, maxMismatches,
-                            errorPvalueThreshold, independentAssemblyFdrThreshold));
+            CorrectorStatistics correctorStatistics = correctorStatisticsBySample.computeIfAbsent(
+                    umiCoverageAndQuality.getUmiTag().getPrimerId(),
+                    tmp -> new CorrectorStatistics());
 
-            umiTree.put(umiCoverageAndQuality);
+            correctorStatistics.put(umiCoverageAndQuality);
         }
+
+        correctorStatisticsBySample.values().stream().forEach(CorrectorStatistics::summarize);
     }
 
-    public UmiCoverageAndQuality get(UmiTag umiTag) {
-        return umiTreeBySample.get(umiTag.getPrimerId()).get(umiTag.getSequence());
+    protected UmiCoverageAndQuality get(UmiTag umiTag) {
+        return correctorStatisticsBySample.get(umiTag.getPrimerId()).get(umiTag.getSequence());
     }
 
     public long getCorrectedCount() {
         return correctedCounter.get();
+    }
+
+    protected final class CorrectorStatistics implements InputPort<UmiCoverageAndQuality>{
+        private final UmiTree umiTree;
+        private final UmiCoverageStatistics umiCoverageStatistics;
+
+        public CorrectorStatistics() {
+            this.umiCoverageStatistics = new UmiCoverageStatistics();
+            this.umiTree = new UmiTree(-1, maxMismatches,
+                    errorPvalueThreshold, independentAssemblyFdrThreshold);
+        }
+
+        public UmiCoverageAndQuality get(NucleotideSequence umi){
+           return umiTree.get(umi);
+        }
+
+        @Override
+        public void put(UmiCoverageAndQuality umiCoverageAndQuality) {
+            umiCoverageStatistics.put(umiCoverageAndQuality);
+            umiTree.put(umiCoverageAndQuality);
+        }
+
+        public void summarize(){
+            umiTree.setObservedDiversityEstimate(umiCoverageStatistics.getObservedDiversityEstimate());
+            umiTree.traverseAndCorrect();
+        }
     }
 }
