@@ -53,13 +53,15 @@ public class UmiTree implements InputPort<UmiCoverageAndQuality> {
 
     @Override
     public void put(UmiCoverageAndQuality umiCoverageAndQuality) {
-        NucleotideSequence umi = umiCoverageAndQuality.getUmiTag().getSequence();
-        if (umiTree.get(umi) != null) {
-            throw new IllegalArgumentException("Duplicate UMIs are not allowed.");
+        if (umiCoverageAndQuality != null) {
+            NucleotideSequence umi = umiCoverageAndQuality.getUmiTag().getSequence();
+            if (umiTree.get(umi) != null) {
+                throw new IllegalArgumentException("Duplicate UMIs are not allowed.");
+            }
+            umiTree.put(umi, umiCoverageAndQuality);
+            umiErrorAndDiversityModel.put(umiCoverageAndQuality);
+            size++;
         }
-        umiTree.put(umi, umiCoverageAndQuality);
-        umiErrorAndDiversityModel.put(umiCoverageAndQuality);
-        size++;
     }
 
     public UmiCoverageAndQuality get(NucleotideSequence umi) {

@@ -26,7 +26,8 @@ public class HeaderUtil {
     public static final String TOKEN_SEP = " ",
             FIELD_SEP = "_",
             PRIMER_ID_TOKEN = "PID" + FIELD_SEP,
-            UMI_TOKEN = "UMI" + FIELD_SEP;
+            UMI_TOKEN = "UMI" + FIELD_SEP,
+            LOW_COVERAGE_TAG = "LOW_COV";
 
     public static String updateHeader(String description, PrimerSearcherResult primerSearcherResult) {
         // TODO: check no tokens are present in description
@@ -45,8 +46,12 @@ public class HeaderUtil {
                 TOKEN_SEP;
     }
 
+    public static String updateHeaderLowCov(String description) {
+        return description + TOKEN_SEP + LOW_COVERAGE_TAG;
+    }
+
     public static String updateHeader(String description, UmiTag umiTag) {
-        updateHeader(description, umiTag.getPrimerId(), umiTag.getSequence());
+        return updateHeader(description, umiTag.getPrimerId(), umiTag.getSequence());
     }
 
     public static String updateHeader(String description, String primerId, NucleotideSequence umi) {

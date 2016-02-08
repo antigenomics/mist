@@ -15,19 +15,19 @@
 
 package com.antigenomics.mist.umi;
 
-import cc.redberry.pipe.InputPort;
 import cc.redberry.pipe.OutputPort;
 import cc.redberry.pipe.Processor;
+import com.antigenomics.mist.preprocess.HeaderUtil;
 import com.milaboratory.core.io.sequence.SequenceRead;
 import com.milaboratory.core.sequence.NucleotideSequence;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class UmiCorrector<T extends SequenceRead> implements Processor<T, T> {
     protected final Map<String, CorrectorStatistics> correctorStatisticsBySample = new HashMap<>();
-    protected final AtomicLong correctedCounter = new AtomicLong();
 
     protected final int maxMismatches, filterDecisionCoverageThreshold;
     protected final double densityModelErrorThreshold, errorPvalueThreshold, independentAssemblyFdrThreshold;
@@ -58,7 +58,27 @@ public abstract class UmiCorrector<T extends SequenceRead> implements Processor<
         correctorStatisticsBySample.values().stream().forEach(CorrectorStatistics::summarize);
     }
 
-    protected UmiTag correct(UmiTag umiTag) {
+    @Override
+    public T process(T read) {
+        HeaderUtil.ParsedHeader parsedHeader = HeaderUtil.parsedHeader(read.getRead(0).getDescription());
+        UmiTag umiTag = parsedHeader.toUmiTag();
+
+        UmiTag correctedUmiTag = correct(umiTag);
+
+        if (correctedUmiTag.getSequence() == null) {
+            String newDescription = HeaderUtil.updateHeaderLowCov(parsedHeader.getRawDescription());
+            return replaceHeader(read, newDescription);
+        }
+
+        String newDescription = HeaderUtil.updateHeader(parsedHeader.getRawDescription(),
+                correctedUmiTag);
+
+        return replaceHeader(read, newDescription);
+    }
+
+    protected abstract T replaceHeader(T read, String newDescription);
+
+    private UmiTag correct(UmiTag umiTag) {
         String primerId = umiTag.getPrimerId();
 
         if (!correctorStatisticsBySample.containsKey(primerId)) {
@@ -69,14 +89,17 @@ public abstract class UmiCorrector<T extends SequenceRead> implements Processor<
                 correctorStatisticsBySample.get(primerId).correct(umiTag.getSequence()));
     }
 
-    public long getCorrectedCount() {
-        return correctedCounter.get();
+    public Map<String, CorrectorStatistics> getCorrectorStatisticsBySample() {
+        return Collections.unmodifiableMap(correctorStatisticsBySample);
     }
 
-    protected final class CorrectorStatistics implements InputPort<UmiCoverageAndQuality> {
+    public final class CorrectorStatistics {
         private final UmiTree umiTree;
         private final UmiCoverageStatistics umiCoverageStatistics;
         private final boolean useCoverageThresholding;
+        private final AtomicLong totalCounter = new AtomicLong(),
+                correctedCounter = new AtomicLong(),
+                coverageFilteredCounter = new AtomicLong();
 
         public CorrectorStatistics() {
             this.umiCoverageStatistics = new UmiCoverageStatistics();
@@ -86,27 +109,63 @@ public abstract class UmiCorrector<T extends SequenceRead> implements Processor<
         }
 
         public NucleotideSequence correct(NucleotideSequence umi) {
+            totalCounter.incrementAndGet();
+
             int coverage = umiTree.get(umi).getCoverage();
 
             if (useCoverageThresholding &&
                     umiCoverageStatistics
                             .getWeightedDensityModel()
                             .computeCoverageFilteringProbability(coverage) >= densityModelErrorThreshold) {
+                coverageFilteredCounter.incrementAndGet();
                 return null;
             }
 
-            return umiTree.correct(umi);
+            NucleotideSequence newUmi = umiTree.correct(umi);
+
+            if (!newUmi.equals(umi)) {
+                correctedCounter.incrementAndGet();
+            }
+
+            return newUmi;
         }
 
-        @Override
-        public void put(UmiCoverageAndQuality umiCoverageAndQuality) {
+        private void put(UmiCoverageAndQuality umiCoverageAndQuality) {
             umiCoverageStatistics.put(umiCoverageAndQuality);
             umiTree.put(umiCoverageAndQuality);
         }
 
-        public void summarize() {
+        private void summarize() {
             umiTree.setObservedDiversityEstimate(umiCoverageStatistics.getObservedDiversityEstimate());
             umiTree.traverseAndCorrect();
         }
+
+        public long getTotalCount() {
+            return totalCounter.get();
+        }
+
+        public long getCorrectedCount() {
+            return correctedCounter.get();
+        }
+
+        public long getCoverageFilteredCount() {
+            return coverageFilteredCounter.get();
+        }
+    }
+
+    @Override
+    public String toString() {
+        String res = "sample_id\ttotal\tcorrected\tlow_coverage";
+
+        for (Map.Entry<String, CorrectorStatistics> entry : correctorStatisticsBySample.entrySet()) {
+            String key = entry.getKey();
+            CorrectorStatistics value = entry.getValue();
+            res += "\n" + key +
+                    "\t" + value.getTotalCount() +
+                    "\t" + value.getCorrectedCount() +
+                    "\t" + value.getCoverageFilteredCount();
+        }
+
+        return res;
     }
 }

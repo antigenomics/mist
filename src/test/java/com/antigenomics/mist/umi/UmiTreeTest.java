@@ -93,7 +93,7 @@ public class UmiTreeTest {
     }
 
     @Test
-    public void syntheticLowCoverageUmiTest() {
+    public void syntheticLowCoverageUmiTest() throws InterruptedException {
         TestResult result = test(12, (byte) 30, 10000, 3.0);
 
         System.out.println("Low coverage UMI tree correction test\nTP=" +
@@ -105,7 +105,7 @@ public class UmiTreeTest {
     }
 
     @Test
-    public void syntheticVeryLowCoverageUmiTest() {
+    public void syntheticVeryLowCoverageUmiTest() throws InterruptedException {
         TestResult result = test(12, (byte) 30, 10000, 1.0);
 
         System.out.println("Very low coverage UMI tree correction test\nTP=" +
@@ -120,7 +120,7 @@ public class UmiTreeTest {
 
 
     @Test
-    public void syntheticHighCoverageUmiTest() {
+    public void syntheticHighCoverageUmiTest() throws InterruptedException {
         TestResult result = test(12, (byte) 30, 10000, 6.0);
 
         System.out.println("High coverage UMI tree correction test\nTP=" +
@@ -132,7 +132,7 @@ public class UmiTreeTest {
     }
 
     @Test
-    public void syntheticLowCoverageLowQualityUmiTest() {
+    public void syntheticLowCoverageLowQualityUmiTest() throws InterruptedException {
         TestResult result = test(12, (byte) 25, 10000, 3.0);
 
         System.out.println("Low coverage low quality UMI tree correction test\nTP=" +
@@ -144,7 +144,7 @@ public class UmiTreeTest {
     }
 
     @Test
-    public void syntheticShortUmiHighCoverageTest() {
+    public void syntheticShortUmiHighCoverageTest() throws InterruptedException {
         TestResult result = test(6, (byte) 30, 100, 6.0);
 
         System.out.println("High coverage short UMI tree correction test\nTP=" +

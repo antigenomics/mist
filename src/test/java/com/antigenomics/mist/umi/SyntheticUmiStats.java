@@ -1,5 +1,6 @@
 package com.antigenomics.mist.umi;
 
+import cc.redberry.pipe.OutputPort;
 import com.antigenomics.mist.TestUtil;
 import com.milaboratory.core.sequence.NSequenceWithQuality;
 import com.milaboratory.core.sequence.NucleotideSequence;
@@ -49,8 +50,9 @@ public class SyntheticUmiStats {
             }
         }
 
+        OutputPort<UmiCoverageAndQuality> op = umiAccumulator.getOutputPort();
         UmiCoverageAndQuality umiCoverageAndQuality;
-        while ((umiCoverageAndQuality = umiAccumulator.getOutputPort().take()) != null) {
+        while ((umiCoverageAndQuality = op.take()) != null) {
             umiCoverageStatistics.put(umiCoverageAndQuality);
             umiErrorAndDiversityModel.put(umiCoverageAndQuality);
         }

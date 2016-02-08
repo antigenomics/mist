@@ -31,16 +31,20 @@ public class UmiCoverageStatistics implements InputPort<UmiCoverageAndQuality> {
 
     @Override
     public void put(UmiCoverageAndQuality umiCoverageAndQuality) {
-        int coverage = umiCoverageAndQuality.getCoverage(),
-                bin = bin(coverage);
+        if (umiCoverageAndQuality != null) {
+            int coverage = umiCoverageAndQuality.getCoverage(),
+                    bin = bin(coverage);
 
-        weightedHistogram[bin] += coverage;
-        histogram[bin]++;
+            weightedHistogram[bin] += coverage;
+            histogram[bin]++;
 
-        poissonLogNormalEM.update(coverage);
+            poissonLogNormalEM.update(coverage);
 
-        total++;
-        totalCoverage += coverage;
+            total++;
+            totalCoverage += coverage;
+        }
+
+        // TODO: summarize?
     }
 
     /**

@@ -20,7 +20,7 @@ import com.antigenomics.mist.preprocess.HeaderUtil;
 import com.milaboratory.core.io.sequence.PairedRead;
 import com.milaboratory.core.io.sequence.SingleReadImpl;
 
-public class UmiCorrectorPaired extends UmiCorrector<PairedRead> {
+public final class UmiCorrectorPaired extends UmiCorrector<PairedRead> {
     public UmiCorrectorPaired(OutputPort<UmiCoverageAndQuality> input) {
         super(input);
     }
@@ -34,22 +34,10 @@ public class UmiCorrectorPaired extends UmiCorrector<PairedRead> {
     }
 
     @Override
-    public PairedRead process(PairedRead input) {
-        HeaderUtil.ParsedHeader parsedHeader = HeaderUtil.parsedHeader(input.getR1().getDescription());
-        UmiTag umiTag = parsedHeader.toUmiTag();
-
-        UmiTag correctedUmiTag = correct(umiTag);
-
-        if (!correctedUmiTag.equals(umiTag)) {
-            correctedCounter.incrementAndGet();
-        }
-
-        String newDescription = HeaderUtil.updateHeader(parsedHeader.getRawDescription(),
-                correctedUmiTag);
-
-        return new PairedRead(new SingleReadImpl(input.getId(),
-                input.getR1().getData(), newDescription),
-                new SingleReadImpl(input.getId(),
-                        input.getR2().getData(), newDescription));
+    protected PairedRead replaceHeader(PairedRead read, String newDescription) {
+        return new PairedRead(new SingleReadImpl(read.getId(),
+                read.getR1().getData(), newDescription),
+                new SingleReadImpl(read.getId(),
+                        read.getR2().getData(), newDescription));
     }
 }

@@ -45,7 +45,7 @@ public class UmiStatsTest {
 
         Assert.assertTrue(Math.abs(densityModel.getLambda() -
                 Math.pow(10, -syntheticUmiStats.getMeanQual() / 10d) *
-                        syntheticUmiStats.getUmiLength() * Math.pow(2, syntheticUmiStats.getLog2CoverageMean())) < 0.03);
+                        syntheticUmiStats.getUmiLength() * Math.pow(2, syntheticUmiStats.getLog2CoverageMean())) < 0.05);
         Assert.assertTrue(Math.abs(densityModel.getMu() - syntheticUmiStats.getLog2CoverageMean()) < 1.5);
     }
 

@@ -17,10 +17,11 @@ package com.antigenomics.mist.umi;
 
 import cc.redberry.pipe.OutputPort;
 import com.antigenomics.mist.preprocess.HeaderUtil;
+import com.milaboratory.core.io.sequence.PairedRead;
 import com.milaboratory.core.io.sequence.SingleRead;
 import com.milaboratory.core.io.sequence.SingleReadImpl;
 
-public class UmiCorrectorSingle extends UmiCorrector<SingleRead> {
+public final class UmiCorrectorSingle extends UmiCorrector<SingleRead> {
     public UmiCorrectorSingle(OutputPort<UmiCoverageAndQuality> input) {
         super(input);
     }
@@ -33,19 +34,9 @@ public class UmiCorrectorSingle extends UmiCorrector<SingleRead> {
                 maxMismatches, errorPvalueThreshold, independentAssemblyFdrThreshold);
     }
 
+
     @Override
-    public SingleRead process(SingleRead input) {
-        HeaderUtil.ParsedHeader parsedHeader = HeaderUtil.parsedHeader(input.getDescription());
-        UmiTag umiTag = parsedHeader.toUmiTag();
-
-        UmiTag correctedUmiTag = correct(umiTag);
-
-        if (!correctedUmiTag.equals(umiTag)) {
-            correctedCounter.incrementAndGet();
-        }
-
-        return new SingleReadImpl(input.getId(),
-                input.getData(), HeaderUtil.updateHeader(parsedHeader.getRawDescription(),
-                correctedUmiTag));
+    protected SingleRead replaceHeader(SingleRead read, String newDescription) {
+        return new SingleReadImpl(read.getId(), read.getData(), newDescription);
     }
 }
