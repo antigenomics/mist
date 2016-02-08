@@ -26,6 +26,7 @@ import java.util.Spliterators;
 import java.util.stream.StreamSupport;
 
 public class UmiTree {
+    // TODO: correction stats
     private final SequenceTreeMap<NucleotideSequence, UmiCoverageAndQuality> umiTree =
             new SequenceTreeMap<>(NucleotideSequence.ALPHABET);
     private final TreeSearchParameters treeSearchParameters;
@@ -72,29 +73,28 @@ public class UmiTree {
         StreamSupport.stream(
                 Spliterators.spliterator(umiTree.values().iterator(), size, Spliterator.IMMUTABLE),
                 true
-        ).forEach(this::setBestParent);
+        ).forEach(this::correct);
     }
 
-    private void setBestParent(UmiCoverageAndQuality child) {
+    private void correct(UmiCoverageAndQuality child) {
         NeighborhoodIterator<NucleotideSequence, UmiCoverageAndQuality> niter =
                 umiTree.getNeighborhoodIterator(child.getUmiTag().getSequence(),
                         treeSearchParameters);
 
+        UmiCoverageAndQuality bestParent = null;
+
         UmiCoverageAndQuality parent;
 
-        UmiParentInfo parentInfo, bestParentInfo = null;
-
         while ((parent = niter.next()) != null) {
-            if (isEligiblePair(parent, child)) {
-                parentInfo = computeParentInfo(parent, child);
-                if (isGood(parentInfo) &&
-                        (bestParentInfo == null || parentInfo.compareTo(bestParentInfo) > 0)) {
-                    bestParentInfo = parentInfo;
-                }
+            if (isEligiblePair(parent, child) && isGood(parent, child) &&
+                    (bestParent == null || bestParent.getCoverage() < parent.getCoverage())) {
+                bestParent = parent;
             }
         }
 
-        child.setParentInfo(bestParentInfo);
+        if (bestParent != null) {
+            child.setParent(bestParent.getUmiTag());
+        }
     }
 
     private boolean isEligiblePair(UmiCoverageAndQuality parent, UmiCoverageAndQuality child) {
@@ -103,39 +103,25 @@ public class UmiTree {
                         parent.getUmiTag().compareTo(child.getUmiTag()) > 0); // no dead loop
     }
 
-    private boolean isGood(UmiParentInfo umiParentInfo) {
-        return umiParentInfo.getIndependentAssemblyProb() * observedDiversityEstimate <= independentAssemblyFdrThreshold ||
-                umiParentInfo.getErrorPValue() <= errorPvalueThreshold;
+    private boolean isGood(UmiCoverageAndQuality parent, UmiCoverageAndQuality child) {
+        return (umiErrorAndDiversityModel.independentAssemblyProbability(parent, child) * observedDiversityEstimate <= independentAssemblyFdrThreshold ||
+                umiErrorAndDiversityModel.errorPValue(parent, child) <= errorPvalueThreshold);
     }
 
-    private UmiParentInfo computeParentInfo(UmiCoverageAndQuality parent, UmiCoverageAndQuality child) {
-        return new UmiParentInfo(parent,
-                umiErrorAndDiversityModel.errorPValue(parent, child),
-                umiErrorAndDiversityModel.independentAssemblyProbability(parent, child));
-    }
-
-    public UmiParentInfo getTopParentInfo(NucleotideSequence umi) {
+    public NucleotideSequence correct(NucleotideSequence umi) {
         UmiCoverageAndQuality umiCoverageAndQuality = umiTree.get(umi);
 
         if (umiCoverageAndQuality == null) {
             throw new IllegalArgumentException("UMI does not exist in the tree.");
         }
 
-        UmiParentInfo parent = umiCoverageAndQuality.getParentInfo();
+        NucleotideSequence parent = umi;
+        UmiTag nextParent;
 
-        if (parent != null) {
-            UmiParentInfo nextParent;
-
-            while ((nextParent = umiTree.get(parent.getUmi()).getParentInfo()) != null) {
-                parent = nextParent;
-            }
+        while ((nextParent = umiTree.get(parent).getParent()) != null) {
+            parent = nextParent.getSequence();
         }
 
         return parent;
-    }
-
-    public NucleotideSequence correct(NucleotideSequence umi) {
-        UmiParentInfo parentInfo = getTopParentInfo(umi);
-        return parentInfo == null ? umi : parentInfo.getUmi();
     }
 }

@@ -21,7 +21,7 @@ public class UmiCoverageAndQuality {
     private final UmiTag umiTag;
     private final int coverage;
     private final SequenceQuality quality;
-    private UmiParentInfo parentInfo;
+    private UmiTag parent;
 
     public UmiCoverageAndQuality(UmiTag umiTag, int coverage, SequenceQuality quality) {
         this.umiTag = umiTag;
@@ -41,11 +41,11 @@ public class UmiCoverageAndQuality {
         return quality;
     }
 
-    public UmiParentInfo getParentInfo() {
-        return parentInfo;
+    public UmiTag getParent() {
+        return parent;
     }
 
-    public void setParentInfo(UmiParentInfo parentInfo) {
-        this.parentInfo = parentInfo;
+    public void setParent(UmiTag parent) {
+        this.parent = parent;
     }
 }
