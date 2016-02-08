@@ -175,6 +175,12 @@ public class PoissonLogNormalEM {
             }
         }
 
+        public double computeCoverageFilteringProbability(int x) {
+            double pP = poissonDistribution.cumulativeProbability(x),
+                    pLN = logNormalDistribution.cumulativeProbability(x);
+            return (1.0 - logNormalPrior) * pP / (logNormalPrior * pLN + (1.0 - logNormalPrior) * pP);
+        }
+
         public double computeLogNormalDensity(int x) {
             return logNormalDistribution.density(x);
         }

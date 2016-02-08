@@ -21,7 +21,6 @@ import cc.redberry.pipe.blocks.FilteringPort;
 import cc.redberry.pipe.blocks.Merger;
 import cc.redberry.pipe.blocks.ParallelProcessor;
 import cc.redberry.pipe.util.CountingOutputPort;
-import cc.redberry.primitives.Filter;
 import com.antigenomics.mist.misc.Speaker;
 import com.antigenomics.mist.preprocess.HeaderUtil;
 import com.milaboratory.core.io.sequence.SequenceRead;
@@ -30,43 +29,29 @@ import com.milaboratory.core.io.sequence.SequenceReader;
 public class UmiCorrectorPipeline<T extends SequenceRead> {
     private static final int INPUT_BUFFER_SIZE = 1024, PROCESSOR_BUFFER_SIZE = 2048;
     private final UmiCorrector<T> umiCorrector;
-    private final int umiCoverageThreshold, threads;
+    private final int threads;
     private final InputPort<T> output, unmatchedOutput;
     private final SequenceReader<T> reader;
 
     public UmiCorrectorPipeline(SequenceReader<T> reader, InputPort<T> output,
                                 InputPort<T> unmatchedOutput, UmiCorrector<T> umiCorrector,
-                                int umiCoverageThreshold, int threads) {
+                                int threads) {
         this.umiCorrector = umiCorrector;
         this.reader = reader;
         this.output = output;
         this.unmatchedOutput = unmatchedOutput;
-        this.umiCoverageThreshold = umiCoverageThreshold;
         this.threads = threads;
     }
 
     public void run() {
-        final FilteringPort<T> filteredReads = new FilteringPort<>(reader,
-                new Filter<T>() {
-                    @Override
-                    public boolean accept(T object) {
-                        UmiTag umiTag = HeaderUtil.parsedHeader(object).toUmiTag();
-                        return umiCorrector.get(umiTag).getCoverage() >= umiCoverageThreshold;
-                    }
-                });
-
-        if (unmatchedOutput != null) {
-            filteredReads.attachDiscardPort(unmatchedOutput);
-        }
-
         final Merger<T> bufferedInput = new Merger<>(INPUT_BUFFER_SIZE);
 
-        bufferedInput.merge(filteredReads);
+        bufferedInput.merge(reader);
         bufferedInput.start();
 
         final CountingOutputPort<T> countingInput = new CountingOutputPort<>(bufferedInput);
 
-        Thread reporter = new Thread(new Runnable() {
+       /* Thread reporter = new Thread(new Runnable() {
             long prevCount = -1;
 
             @Override
@@ -94,19 +79,26 @@ public class UmiCorrectorPipeline<T extends SequenceRead> {
         });
 
         reporter.setDaemon(true);
-        reporter.start();
+        reporter.start();*/
 
         final OutputPort<T> correctorResults = new ParallelProcessor<>(bufferedInput,
                 umiCorrector, PROCESSOR_BUFFER_SIZE, threads);
 
+        final FilteringPort<T> filteredReads = new FilteringPort<>(correctorResults,
+                read -> read.getRead(0).getDescription().contains(HeaderUtil.LOW_COVERAGE_TAG));
+
+        if (unmatchedOutput != null) {
+            filteredReads.attachDiscardPort(unmatchedOutput);
+        }
+
         T read;
 
-        while ((read = correctorResults.take()) != null) {
+        while ((read = filteredReads.take()) != null) {
             output.put(read);
         }
 
         output.put(null);
 
-        reporter.interrupt();
+        //reporter.interrupt();
     }
 }

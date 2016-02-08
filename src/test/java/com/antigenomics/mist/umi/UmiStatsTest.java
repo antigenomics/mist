@@ -15,6 +15,7 @@
 
 package com.antigenomics.mist.umi;
 
+import cc.redberry.pipe.CUtils;
 import cc.redberry.pipe.blocks.ParallelProcessor;
 import com.antigenomics.mist.TestUtil;
 import com.antigenomics.mist.misc.PoissonLogNormalEM;
@@ -30,9 +31,27 @@ import org.junit.Test;
 import java.io.IOException;
 
 public class UmiStatsTest {
+    @Test
+    public void syntheticTest() {
+        SyntheticUmiStats syntheticUmiStats = new SyntheticUmiStats(1000, 12, (byte) 35, 5.0, 1.0);
+
+        UmiCoverageStatistics coverageStats = syntheticUmiStats.getUmiCoverageStatistics();
+
+        System.out.println(coverageStats);
+
+        Assert.assertEquals((int) (syntheticUmiStats.getLog2CoverageMean() - 1), coverageStats.getThresholdEstimate());
+
+        PoissonLogNormalEM.PoissonLogNormalModel densityModel = coverageStats.getWeightedDensityModel();
+
+        Assert.assertTrue(Math.abs(densityModel.getLambda() -
+                Math.pow(10, -syntheticUmiStats.getMeanQual() / 10d) *
+                        syntheticUmiStats.getUmiLength() * Math.pow(2, syntheticUmiStats.getLog2CoverageMean())) < 0.05);
+        Assert.assertTrue(Math.abs(densityModel.getMu() - syntheticUmiStats.getLog2CoverageMean()) < 1.5);
+    }
+
     @SuppressWarnings("unchecked")
     @Test
-    public void realDataTest() throws IOException {
+    public void realDataTest() throws IOException, InterruptedException {
         PrimerSearcherArray primerSearcherArray = TestUtil.readBarcodes("umi_barcodes.txt");
 
         SearchProcessor searchProcessor = new SearchProcessor(
@@ -52,11 +71,9 @@ public class UmiStatsTest {
 
         }
 
-        UmiStatistics umiStatistics = new UmiStatistics();
+        UmiCoverageStatistics coverageStats = new UmiCoverageStatistics();
 
-        umiStatistics.update(searchProcessor.getUmiAccumulator().getUmiInfoProvider());
-
-        UmiCoverageStatistics coverageStats = umiStatistics.getUmiCoverageStatistics(primerSearcherArray.getSampleIds().get(0));
+        CUtils.drain(searchProcessor.getUmiAccumulator().getOutputPort(), coverageStats);
 
         System.out.println("threshold=" + coverageStats.getThresholdEstimate());
 

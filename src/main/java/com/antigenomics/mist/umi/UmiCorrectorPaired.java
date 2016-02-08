@@ -19,41 +19,25 @@ import cc.redberry.pipe.OutputPort;
 import com.antigenomics.mist.preprocess.HeaderUtil;
 import com.milaboratory.core.io.sequence.PairedRead;
 import com.milaboratory.core.io.sequence.SingleReadImpl;
-import com.milaboratory.core.sequence.NucleotideSequence;
 
-public class UmiCorrectorPaired extends UmiCorrector<PairedRead> {
+public final class UmiCorrectorPaired extends UmiCorrector<PairedRead> {
+    public UmiCorrectorPaired(OutputPort<UmiCoverageAndQuality> input) {
+        super(input);
+    }
+
     public UmiCorrectorPaired(OutputPort<UmiCoverageAndQuality> input,
-                              int maxMismatches, double errorLogOddsRatioThreshold) {
-        super(input, maxMismatches, errorLogOddsRatioThreshold);
+                              int filterDecisionCoverageThreshold, double densityModelErrorThreshold,
+                              int maxMismatches, double errorPvalueThreshold, double independentAssemblyFdrThreshold) {
+        super(input,
+                filterDecisionCoverageThreshold, densityModelErrorThreshold,
+                maxMismatches, errorPvalueThreshold, independentAssemblyFdrThreshold);
     }
 
     @Override
-    public PairedRead process(PairedRead input) {
-        HeaderUtil.ParsedHeader parsedHeader = HeaderUtil.parsedHeader(input.getR1().getDescription());
-        UmiTag umiTag = parsedHeader.toUmiTag();
-
-        // TODO: ignore reads with no UMI tags?
-        // TODO: some stats
-
-        UmiTree umiTree = umiTreeBySample.get(umiTag.getPrimerId());
-
-        if (umiTree == null) {
-            throw new IllegalArgumentException("The read is associated with a sample " +
-                    "that is not present in UMI corrector.");
-        }
-
-        NucleotideSequence correctedUmi = umiTree.correct(umiTag.getSequence());
-        
-        if (!correctedUmi.equals(umiTag.getSequence())) {
-            correctedCounter.incrementAndGet();
-        }
-        
-        String newDescription = HeaderUtil.updateHeader(parsedHeader.getRawDescription(),
-                parsedHeader.getPrimerId(), correctedUmi);
-
-        return new PairedRead(new SingleReadImpl(input.getId(),
-                input.getR1().getData(), newDescription),
-                new SingleReadImpl(input.getId(),
-                        input.getR2().getData(), newDescription));
+    protected PairedRead replaceHeader(PairedRead read, String newDescription) {
+        return new PairedRead(new SingleReadImpl(read.getId(),
+                read.getR1().getData(), newDescription),
+                new SingleReadImpl(read.getId(),
+                        read.getR2().getData(), newDescription));
     }
 }

@@ -19,6 +19,12 @@ import com.antigenomics.mist.primer.PrimerSearcher;
 import com.antigenomics.mist.primer.PrimerSearcherArray;
 import com.antigenomics.mist.primer.pattern.DummyPatternSearcher;
 import com.antigenomics.mist.primer.pattern.FuzzyPatternSearcher;
+import com.milaboratory.core.sequence.NSequenceWithQuality;
+import com.milaboratory.core.sequence.NucleotideSequence;
+import com.milaboratory.core.sequence.SequenceQuality;
+import org.apache.commons.math3.distribution.PoissonDistribution;
+import org.apache.commons.math3.random.RandomGenerator;
+import org.apache.commons.math3.random.Well19937c;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -26,9 +32,13 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.zip.GZIPInputStream;
 
 public class TestUtil {
+    public static RandomGenerator randomGenerator = new Well19937c(51102);
+    public static final Random rnd = new Random(480011);
+
     public static InputStream resourceAsStream(String name) throws IOException {
         InputStream inputStream = TestUtil.class.getClassLoader().getResourceAsStream(name);
 
@@ -60,4 +70,39 @@ public class TestUtil {
         return barcode.length() > 0 && !barcode.equals(".");
     }
 
+    public static NucleotideSequence randomSequence(int length) {
+        byte[] data = new byte[length];
+
+        for (int i = 0; i < length; i++) {
+            data[i] = (byte) rnd.nextInt(4);
+        }
+
+        return new NucleotideSequence(data);
+    }
+
+    public static SequenceQuality randomQuality(int length, byte mean) {
+        byte[] qual = new byte[length];
+        PoissonDistribution poissonDistribution = new PoissonDistribution(randomGenerator,
+                Math.max(1, 40 - mean), PoissonDistribution.DEFAULT_EPSILON, PoissonDistribution.DEFAULT_MAX_ITERATIONS);
+
+        for (int i = 0; i < length; i++) {
+            qual[i] = (byte) Math.min(Math.max(2, 40 - poissonDistribution.sample()), 40);
+        }
+
+        return new SequenceQuality(qual);
+    }
+
+    public static NSequenceWithQuality mutate(NSequenceWithQuality nSequenceWithQuality) {
+        byte[] bases = new byte[nSequenceWithQuality.size()];
+
+        for (int i = 0; i < nSequenceWithQuality.size(); i++) {
+            if (rnd.nextDouble() > 4 * nSequenceWithQuality.getQuality().probabilityOfErrorAt(i) / 3) {
+                bases[i] = nSequenceWithQuality.getSequence().codeAt(i);
+            } else {
+                bases[i] = (byte) rnd.nextInt(4);
+            }
+        }
+
+        return new NSequenceWithQuality(new NucleotideSequence(bases), nSequenceWithQuality.getQuality());
+    }
 }

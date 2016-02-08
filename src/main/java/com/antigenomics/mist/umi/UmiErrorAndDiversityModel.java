@@ -15,21 +15,22 @@
 
 package com.antigenomics.mist.umi;
 
+import cc.redberry.pipe.InputPort;
+import cc.redberry.pipe.OutputPort;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.core.sequence.SequenceQuality;
 import org.apache.commons.math3.distribution.BinomialDistribution;
 
-public class UmiErrorAndDiversityModel {
+public class UmiErrorAndDiversityModel implements InputPort<UmiCoverageAndQuality> {
     private final static int MAX_UMI_LEN = 256;
     private final double[][] pwm = new double[MAX_UMI_LEN][4];
     private int total;
 
     public UmiErrorAndDiversityModel() {
 
-
     }
 
-    public void update(UmiCoverageAndQuality umiCoverageAndQuality) {
+    public void put(UmiCoverageAndQuality umiCoverageAndQuality) {
         NucleotideSequence umi = umiCoverageAndQuality.getUmiTag().getSequence();
         int coverage = umiCoverageAndQuality.getCoverage();
 
@@ -40,17 +41,18 @@ public class UmiErrorAndDiversityModel {
         total += coverage;
     }
 
-    public double getErrorLogOddsRatio(UmiCoverageAndQuality parent, UmiCoverageAndQuality child) {
-        return Math.log10(errorProbability(parent, child)) -
-                Math.log10(independentAssemblyProbability(parent, child));
+    public void put(OutputPort<UmiCoverageAndQuality> umiInfoProvider) {
+        UmiCoverageAndQuality umiCoverageAndQuality;
 
+        while ((umiCoverageAndQuality = umiInfoProvider.take()) != null) {
+            put(umiCoverageAndQuality);
+        }
     }
 
-    public double independentAssemblyProbability(UmiCoverageAndQuality parent, UmiCoverageAndQuality child) {
+    public double independentAssemblyProbability(NucleotideSequence parentUmi, NucleotideSequence childUmi) {
         double prob = 1.0;
 
-        NucleotideSequence parentUmi = parent.getUmiTag().getSequence(),
-                childUmi = child.getUmiTag().getSequence();
+        assert parentUmi.size() == childUmi.size();
 
         for (int i = 0; i < parentUmi.size(); i++) {
             byte code = parentUmi.codeAt(i);
@@ -63,7 +65,11 @@ public class UmiErrorAndDiversityModel {
         return prob;
     }
 
-    public double errorProbability(UmiCoverageAndQuality parent, UmiCoverageAndQuality child) {
+    public double independentAssemblyProbability(UmiCoverageAndQuality parent, UmiCoverageAndQuality child) {
+        return independentAssemblyProbability(parent.getUmiTag().getSequence(), child.getUmiTag().getSequence());
+    }
+
+    public double errorPValue(UmiCoverageAndQuality parent, UmiCoverageAndQuality child) {
         double logProb = 0.0;
 
         NucleotideSequence parentUmi = parent.getUmiTag().getSequence(),
@@ -77,7 +83,29 @@ public class UmiErrorAndDiversityModel {
             }
         }
 
-        return new BinomialDistribution(parent.getCoverage() + child.getCoverage(), Math.pow(10, logProb))
-                .cumulativeProbability(child.getCoverage());
+        BinomialDistribution binomialDistribution = new BinomialDistribution(parent.getCoverage() + child.getCoverage(),
+                Math.pow(10, logProb));
+
+        return 1.0 - binomialDistribution.cumulativeProbability(child.getCoverage()) +
+                0.5 * binomialDistribution.probability(child.getCoverage());
+    }
+
+    public double computeExpectedDiversity() {
+        double entropy = 0;
+
+        for (int i = 0; i < MAX_UMI_LEN; i++) {
+            double partialEntropy = 0, sum = 0;
+            for (int j = 0; j < 4; j++) {
+                sum += pwm[i][j];
+                partialEntropy += pwm[i][j] == 0 ? 0 : pwm[i][j] * Math.log10(pwm[i][j]);
+            }
+            if (sum > 0) {
+                partialEntropy /= sum;
+                partialEntropy -= Math.log10(sum);
+            }
+            entropy -= partialEntropy;
+        }
+
+        return Math.pow(10, entropy);
     }
 }

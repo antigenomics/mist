@@ -18,12 +18,21 @@ package com.antigenomics.mist.umi;
 import com.milaboratory.core.sequence.NucleotideSequence;
 
 public class UmiTag implements Comparable<UmiTag> {
+    <<<<<<<HEAD
+    =======
+    public static final String DEFAULT_PRIMER_ID = "default";
+
+    >>>>>>>feature/umi-correction-api
     private final String primerId;
     private final NucleotideSequence sequence;
 
     public UmiTag(String primerId, NucleotideSequence sequence) {
         this.primerId = primerId;
         this.sequence = sequence;
+    }
+
+    public UmiTag(NucleotideSequence sequence) {
+        this(DEFAULT_PRIMER_ID, sequence);
     }
 
     public String getPrimerId() {
@@ -50,8 +59,13 @@ public class UmiTag implements Comparable<UmiTag> {
     }
 
     @Override
+    public String toString() {
+        return primerId + ":" + sequence.toString();
+    }
+
+    @Override
     public int compareTo(UmiTag o) {
-        int comp1 = primerId.compareTo(o.primerId);
-        return comp1 == 0 ? sequence.compareTo(o.sequence) : comp1;
+        int res = primerId.compareTo(o.primerId);
+        return res == 0 ? sequence.compareTo(o.sequence) : res;
     }
 }

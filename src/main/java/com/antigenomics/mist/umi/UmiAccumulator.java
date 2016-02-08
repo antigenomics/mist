@@ -28,26 +28,47 @@ public class UmiAccumulator {
     public UmiAccumulator() {
     }
 
-    public void update(String primerId, NSequenceWithQuality leftUmi, NSequenceWithQuality rightUmi) {
+    public void put(NSequenceWithQuality leftUmi, NSequenceWithQuality rightUmi) {
+        put(UmiTag.DEFAULT_PRIMER_ID, leftUmi, rightUmi);
+    }
 
-        NSequenceWithQuality umiNSQ = leftUmi.concatenate(rightUmi);
+    public void put(String primerId, NSequenceWithQuality leftUmi, NSequenceWithQuality rightUmi) {
+        put(primerId, leftUmi.concatenate(rightUmi));
+    }
 
+    public void put(NSequenceWithQuality umiNSQ) {
+        put(UmiTag.DEFAULT_PRIMER_ID, umiNSQ);
+    }
+
+    public void put(String primerId, NSequenceWithQuality umiNSQ) {
         UmiTag umiTag = new UmiTag(primerId, umiNSQ.getSequence());
 
         UmiCoverageAndQualityFactory umiCoverageAndQualityFactory = umiInfoFactoryMap.computeIfAbsent(umiTag,
                 tmp -> new UmiCoverageAndQualityFactory(umiTag, umiNSQ.size()));
 
-        umiCoverageAndQualityFactory.update(umiNSQ.getQuality());
+        umiCoverageAndQualityFactory.append(umiNSQ.getQuality());
     }
 
-    public OutputPort<UmiCoverageAndQuality> getUmiInfoProvider() {
-        return new UmiInfoProvider();
+    public UmiCoverageAndQuality getAt(UmiTag umiTag) {
+        if (!umiInfoFactoryMap.containsKey(umiTag)) {
+            throw new IllegalArgumentException("Tag " + umiTag + " is not in the accumulator.");
+        }
+
+        return umiInfoFactoryMap.get(umiTag).create();
     }
 
-    private class UmiInfoProvider implements OutputPort<UmiCoverageAndQuality> {
+    public int size() {
+        return umiInfoFactoryMap.size();
+    }
+
+    public OutputPort<UmiCoverageAndQuality> getOutputPort() {
+        return new UmiCoverageAndQualityOutputPort();
+    }
+
+    private class UmiCoverageAndQualityOutputPort implements OutputPort<UmiCoverageAndQuality> {
         private final Iterator<UmiCoverageAndQualityFactory> iter;
 
-        public UmiInfoProvider() {
+        public UmiCoverageAndQualityOutputPort() {
             this.iter = umiInfoFactoryMap.values().iterator();
         }
 

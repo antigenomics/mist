@@ -15,6 +15,8 @@
 
 package com.antigenomics.mist.umi;
 
+import cc.redberry.pipe.InputPort;
+import cc.redberry.pipe.OutputPort;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.core.tree.NeighborhoodIterator;
 import com.milaboratory.core.tree.SequenceTreeMap;
@@ -24,30 +26,42 @@ import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.stream.StreamSupport;
 
-public class UmiTree {
+public class UmiTree implements InputPort<UmiCoverageAndQuality> {
     private final SequenceTreeMap<NucleotideSequence, UmiCoverageAndQuality> umiTree =
             new SequenceTreeMap<>(NucleotideSequence.ALPHABET);
     private final TreeSearchParameters treeSearchParameters;
     private final UmiErrorAndDiversityModel umiErrorAndDiversityModel = new UmiErrorAndDiversityModel();
-    private final double errorLogOddsRatioThreshold;
-    private int size;
+    private double errorPvalueThreshold, independentAssemblyFdrThreshold;
+    private int observedDiversityEstimate;
+    private int size, correctedCount = 0, correctedByErrorFreqCount = 0, correctedByAssemblyProbCount = 0;
 
-    public UmiTree(int maxMismatches, double errorLogOddsRatioThreshold) {
+    public UmiTree(int observedDiversityEstimate, int maxMismatches,
+                   double errorPvalueThreshold, double independentAssemblyFdrThreshold) {
+        this.observedDiversityEstimate = observedDiversityEstimate;
         this.treeSearchParameters = new TreeSearchParameters(maxMismatches, 0, 0);
-        this.errorLogOddsRatioThreshold = errorLogOddsRatioThreshold;
+        this.errorPvalueThreshold = errorPvalueThreshold;
+        this.independentAssemblyFdrThreshold = independentAssemblyFdrThreshold;
+    }
+
+    public UmiTree(int observedDiversityEstimate) {
+        this(observedDiversityEstimate, 1, 0.05, 0.1);
     }
 
     public UmiTree() {
-        this(2, 0.5);
+        this(-1, 1, 0.05, 0.1);
     }
 
-    public void update(UmiCoverageAndQuality umiCoverageAndQuality) {
-        NucleotideSequence umi = umiCoverageAndQuality.getUmiTag().getSequence();
-        if (umiTree.get(umi) != null)
-            throw new IllegalArgumentException("Duplicate UMIs are not allowed.");
-        umiTree.put(umi, umiCoverageAndQuality);
-        umiErrorAndDiversityModel.update(umiCoverageAndQuality);
-        size++;
+    @Override
+    public void put(UmiCoverageAndQuality umiCoverageAndQuality) {
+        if (umiCoverageAndQuality != null) {
+            NucleotideSequence umi = umiCoverageAndQuality.getUmiTag().getSequence();
+            if (umiTree.get(umi) != null) {
+                throw new IllegalArgumentException("Duplicate UMIs are not allowed.");
+            }
+            umiTree.put(umi, umiCoverageAndQuality);
+            umiErrorAndDiversityModel.put(umiCoverageAndQuality);
+            size++;
+        }
     }
 
     public UmiCoverageAndQuality get(NucleotideSequence umi) {
@@ -61,9 +75,9 @@ public class UmiTree {
         ).forEach(this::correct);
     }
 
-    private void correct(UmiCoverageAndQuality umiCoverageAndQuality) {
+    private void correct(UmiCoverageAndQuality child) {
         NeighborhoodIterator<NucleotideSequence, UmiCoverageAndQuality> niter =
-                umiTree.getNeighborhoodIterator(umiCoverageAndQuality.getUmiTag().getSequence(),
+                umiTree.getNeighborhoodIterator(child.getUmiTag().getSequence(),
                         treeSearchParameters);
 
         UmiCoverageAndQuality bestParent = null;
@@ -71,20 +85,37 @@ public class UmiTree {
         UmiCoverageAndQuality parent;
 
         while ((parent = niter.next()) != null) {
-            if (isParent(parent, umiCoverageAndQuality) &&
+            if (isEligiblePair(parent, child) && isGood(parent, child) &&
                     (bestParent == null || bestParent.getCoverage() < parent.getCoverage())) {
                 bestParent = parent;
             }
         }
 
         if (bestParent != null) {
-            umiCoverageAndQuality.setParent(bestParent.getUmiTag());
+            child.setParent(bestParent.getUmiTag());
         }
     }
 
-    private boolean isParent(UmiCoverageAndQuality parent, UmiCoverageAndQuality child) {
-        return parent.getCoverage() > child.getCoverage() && 
-                umiErrorAndDiversityModel.getErrorLogOddsRatio(parent, child) < errorLogOddsRatioThreshold;
+    private boolean isEligiblePair(UmiCoverageAndQuality parent, UmiCoverageAndQuality child) {
+        return parent != child && (parent.getCoverage() > child.getCoverage()) ||
+                (parent.getCoverage() == child.getCoverage() && // for singletons/doubletons
+                        parent.getUmiTag().compareTo(child.getUmiTag()) > 0); // no dead loop
+    }
+
+    private boolean isGood(UmiCoverageAndQuality parent, UmiCoverageAndQuality child) {
+        boolean correctedByAssemblyProb = umiErrorAndDiversityModel.independentAssemblyProbability(parent, child) *
+                (observedDiversityEstimate < 0 ? size : observedDiversityEstimate) <= independentAssemblyFdrThreshold,
+                correctedByErrorFreq = umiErrorAndDiversityModel.errorPValue(parent, child) <= errorPvalueThreshold;
+
+        if (correctedByAssemblyProb) {
+            correctedByAssemblyProbCount++;
+        }
+
+        if (correctedByErrorFreq) {
+            correctedByErrorFreqCount++;
+        }
+
+        return (correctedByAssemblyProb || correctedByErrorFreq) && (++correctedCount > 0);
     }
 
     public NucleotideSequence correct(NucleotideSequence umi) {
@@ -94,12 +125,53 @@ public class UmiTree {
             throw new IllegalArgumentException("UMI does not exist in the tree.");
         }
 
-        NucleotideSequence parent = umi, nextParent;
+        NucleotideSequence parent = umi;
+        UmiTag nextParent;
 
-        while ((nextParent = umiTree.get(parent).getParent().getSequence()) != null) {
-            parent = nextParent;
+        while ((nextParent = umiTree.get(parent).getParent()) != null) {
+            parent = nextParent.getSequence();
         }
 
         return parent;
+    }
+
+    public int getSize() {
+        return size;
+    }
+
+    public int getCorrectedCount() {
+        return correctedCount;
+    }
+
+    public int getCorrectedByErrorFreqCount() {
+        return correctedByErrorFreqCount;
+    }
+
+    public int getCorrectedByAssemblyProbCount() {
+        return correctedByAssemblyProbCount;
+    }
+
+    public double getErrorPvalueThreshold() {
+        return errorPvalueThreshold;
+    }
+
+    public double getIndependentAssemblyFdrThreshold() {
+        return independentAssemblyFdrThreshold;
+    }
+
+    public int getObservedDiversityEstimate() {
+        return observedDiversityEstimate;
+    }
+
+    public void setObservedDiversityEstimate(int observedDiversityEstimate) {
+        this.observedDiversityEstimate = observedDiversityEstimate;
+    }
+
+    public void setIndependentAssemblyFdrThreshold(double independentAssemblyFdrThreshold) {
+        this.independentAssemblyFdrThreshold = independentAssemblyFdrThreshold;
+    }
+
+    public void setErrorPvalueThreshold(double errorPvalueThreshold) {
+        this.errorPvalueThreshold = errorPvalueThreshold;
     }
 }

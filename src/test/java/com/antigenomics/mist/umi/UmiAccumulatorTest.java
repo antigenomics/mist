@@ -57,7 +57,7 @@ public class UmiAccumulatorTest {
         }
 
         UmiAccumulator umiAccumulator = searchProcessor.getUmiAccumulator();
-        OutputPort<UmiCoverageAndQuality> umiInfoProvider = umiAccumulator.getUmiInfoProvider();
+        OutputPort<UmiCoverageAndQuality> umiInfoProvider = umiAccumulator.getOutputPort();
 
         UmiCoverageAndQuality umiCoverageAndQuality;
         int readsInUmis = 0;

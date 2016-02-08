@@ -1,9 +1,10 @@
 package com.antigenomics.mist.umi;
 
+import cc.redberry.pipe.InputPort;
 import com.antigenomics.mist.misc.PoissonLogNormalEM;
 
 // non thread-safe
-public class UmiCoverageStatistics {
+public class UmiCoverageStatistics implements InputPort<UmiCoverageAndQuality> {
     public static final int MAX_UMI_COVERAGE = 65536;
     private final long[] weightedHistogram;
     private final int[] histogram;
@@ -28,19 +29,30 @@ public class UmiCoverageStatistics {
         return Math.min(numberOfBins - 1, (int) (Math.log(x) / Math.log(2)));
     }
 
-    public void update(UmiCoverageAndQuality umiCoverageAndQuality) {
-        int coverage = umiCoverageAndQuality.getCoverage(),
-                bin = bin(coverage);
+    @Override
+    public void put(UmiCoverageAndQuality umiCoverageAndQuality) {
+        if (umiCoverageAndQuality != null) {
+            int coverage = umiCoverageAndQuality.getCoverage(),
+                    bin = bin(coverage);
 
-        weightedHistogram[bin] += coverage;
-        histogram[bin]++;
+            weightedHistogram[bin] += coverage;
+            histogram[bin]++;
 
-        poissonLogNormalEM.update(coverage);
+            poissonLogNormalEM.update(coverage);
 
-        total++;
-        totalCoverage += coverage;
+            total++;
+            totalCoverage += coverage;
+        }
+
+        // TODO: summarize?
     }
 
+    /**
+     * TODO
+     *
+     * @return
+     * @deprecated Use a more robust method to estimate threshold
+     */
     public int getThresholdEstimate() {
         int indexOfMax = -1;
         long maxValue = -1;
@@ -55,11 +67,26 @@ public class UmiCoverageStatistics {
         return (int) Math.pow(2, indexOfMax / 2);
     }
 
+    /**
+     * TODO
+     *
+     * @return
+     * @deprecated Use a more robust method to estimate diversity
+     */
+    @Deprecated
+    public int getObservedDiversityEstimate() {
+        int observedDiversity = 0;
+        for (int i = getThresholdEstimate(); i < numberOfBins; i++) {
+            observedDiversity += histogram[i];
+        }
+        return observedDiversity;
+    }
+
     public double getDensity(int umiCoverage) {
         return getCount(umiCoverage) / total;
     }
 
-    public double getCount(int umiCoverage) {
+    public int getCount(int umiCoverage) {
         return histogram[bin(umiCoverage)];
     }
 
@@ -67,7 +94,7 @@ public class UmiCoverageStatistics {
         return getWeightedCount(umiCoverage) / totalCoverage;
     }
 
-    public double getWeightedCount(int umiCoverage) {
+    public long getWeightedCount(int umiCoverage) {
         return weightedHistogram[bin(umiCoverage)];
     }
 
@@ -77,5 +104,21 @@ public class UmiCoverageStatistics {
 
     public int getTotal() {
         return total;
+    }
+
+    @Override
+    public String toString() {
+        String str = "coverage\tweighted\tunweighted\testimate\n";
+
+        int estimate = (int) (Math.log(getThresholdEstimate()) / Math.log(2));
+
+        for (int i = 0; i <= Math.log(MAX_UMI_COVERAGE) / Math.log(2); i++) {
+            int count = (int) Math.pow(2, i);
+
+            str += count + "\t" + getWeightedCount(count) + "\t" + getCount(count) + "\t" +
+                    (i == estimate ? "*" : " ") + "\n";
+        }
+
+        return str;
     }
 }

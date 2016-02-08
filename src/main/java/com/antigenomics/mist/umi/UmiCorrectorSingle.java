@@ -17,39 +17,26 @@ package com.antigenomics.mist.umi;
 
 import cc.redberry.pipe.OutputPort;
 import com.antigenomics.mist.preprocess.HeaderUtil;
+import com.milaboratory.core.io.sequence.PairedRead;
 import com.milaboratory.core.io.sequence.SingleRead;
 import com.milaboratory.core.io.sequence.SingleReadImpl;
-import com.milaboratory.core.sequence.NucleotideSequence;
 
-public class UmiCorrectorSingle extends UmiCorrector<SingleRead> {
-    public UmiCorrectorSingle(OutputPort<UmiCoverageAndQuality> input,
-                              int maxMismatches, double errorLogOddsRatioThreshold) {
-        super(input, maxMismatches, errorLogOddsRatioThreshold);
+public final class UmiCorrectorSingle extends UmiCorrector<SingleRead> {
+    public UmiCorrectorSingle(OutputPort<UmiCoverageAndQuality> input) {
+        super(input);
     }
 
+    public UmiCorrectorSingle(OutputPort<UmiCoverageAndQuality> input,
+                              int filterDecisionCoverageThreshold, double densityModelErrorThreshold,
+                              int maxMismatches, double errorPvalueThreshold, double independentAssemblyFdrThreshold) {
+        super(input,
+                filterDecisionCoverageThreshold, densityModelErrorThreshold,
+                maxMismatches, errorPvalueThreshold, independentAssemblyFdrThreshold);
+    }
+
+
     @Override
-    public SingleRead process(SingleRead input) {
-        HeaderUtil.ParsedHeader parsedHeader = HeaderUtil.parsedHeader(input.getDescription());
-        UmiTag umiTag = parsedHeader.toUmiTag();
-
-        // TODO: ignore reads with no UMI tags?
-        // TODO: some stats
-
-        UmiTree umiTree = umiTreeBySample.get(umiTag.getPrimerId());
-
-        if (umiTree == null) {
-            throw new IllegalArgumentException("The read is associated with a sample " +
-                    "that is not present in UMI corrector.");
-        }
-
-        NucleotideSequence correctedUmi = umiTree.correct(umiTag.getSequence());
-
-        if (!correctedUmi.equals(umiTag.getSequence())) {
-            correctedCounter.incrementAndGet();
-        }
-
-        return new SingleReadImpl(input.getId(),
-                input.getData(), HeaderUtil.updateHeader(parsedHeader.getRawDescription(),
-                parsedHeader.getPrimerId(), correctedUmi));
+    protected SingleRead replaceHeader(SingleRead read, String newDescription) {
+        return new SingleReadImpl(read.getId(), read.getData(), newDescription);
     }
 }

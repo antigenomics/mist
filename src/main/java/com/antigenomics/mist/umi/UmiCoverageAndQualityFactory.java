@@ -31,7 +31,7 @@ class UmiCoverageAndQualityFactory {
         this.cumulativeQuality = new AtomicFloatArray(length);
     }
 
-    public void update(SequenceQuality quality) {
+    public void append(SequenceQuality quality) {
         if (quality.size() != cumulativeQuality.length() ||
                 quality.size() != cumulativeQuality.length()) {
             throw new IllegalArgumentException("UMI length mismatch.");
