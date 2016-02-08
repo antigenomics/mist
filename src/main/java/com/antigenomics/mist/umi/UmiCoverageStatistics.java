@@ -43,6 +43,12 @@ public class UmiCoverageStatistics implements InputPort<UmiCoverageAndQuality> {
         totalCoverage += coverage;
     }
 
+    /**
+     * TODO
+     *
+     * @return
+     * @deprecated Use a more robust method to estimate threshold
+     */
     public int getThresholdEstimate() {
         int indexOfMax = -1;
         long maxValue = -1;
@@ -59,6 +65,7 @@ public class UmiCoverageStatistics implements InputPort<UmiCoverageAndQuality> {
 
     /**
      * TODO
+     *
      * @return
      * @deprecated Use a more robust method to estimate diversity
      */

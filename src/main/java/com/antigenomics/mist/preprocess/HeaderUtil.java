@@ -45,6 +45,10 @@ public class HeaderUtil {
                 TOKEN_SEP;
     }
 
+    public static String updateHeader(String description, UmiTag umiTag) {
+        updateHeader(description, umiTag.getPrimerId(), umiTag.getSequence());
+    }
+
     public static String updateHeader(String description, String primerId, NucleotideSequence umi) {
         return description + TOKEN_SEP + PRIMER_ID_TOKEN +
                 primerId +
