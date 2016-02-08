@@ -18,11 +18,8 @@ package com.antigenomics.mist.umi;
 import com.milaboratory.core.sequence.NucleotideSequence;
 
 public class UmiTag implements Comparable<UmiTag> {
-    <<<<<<<HEAD
-    =======
     public static final String DEFAULT_PRIMER_ID = "default";
 
-    >>>>>>>feature/umi-correction-api
     private final String primerId;
     private final NucleotideSequence sequence;
 

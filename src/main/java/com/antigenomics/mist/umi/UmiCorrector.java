@@ -17,7 +17,7 @@ package com.antigenomics.mist.umi;
 
 import cc.redberry.pipe.OutputPort;
 import cc.redberry.pipe.Processor;
-import com.antigenomics.mist.preprocess.HeaderUtil;
+import com.antigenomics.mist.misc.HeaderUtil;
 import com.milaboratory.core.io.sequence.SequenceRead;
 import com.milaboratory.core.sequence.NucleotideSequence;
 

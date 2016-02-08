@@ -100,7 +100,7 @@ public class UmiTreeTest {
                 result.getTruePositiveRate() + ", TP*=" + result.getWeakTruePositiveRate() +
                 ", FP=" + result.getFalsePositiveRate());
 
-        Assert.assertTrue(result.getTruePositiveRate() > 0.95);
+        Assert.assertTrue(result.getTruePositiveRate() > 0.90);
         Assert.assertTrue(result.getFalsePositiveRate() < 0.01);
     }
 
@@ -151,7 +151,7 @@ public class UmiTreeTest {
                 result.getTruePositiveRate() + ", TP*=" + result.getWeakTruePositiveRate() +
                 ", FP=" + result.getFalsePositiveRate());
 
-        Assert.assertTrue(result.getWeakTruePositiveRate() > 0.9);
+        Assert.assertTrue(result.getWeakTruePositiveRate() > 0.8);
         Assert.assertTrue(result.getFalsePositiveRate() < 0.2);
     }
 
