@@ -1,9 +1,10 @@
 package com.antigenomics.mist.umi;
 
+import cc.redberry.pipe.InputPort;
 import com.antigenomics.mist.misc.PoissonLogNormalEM;
 
 // non thread-safe
-public class UmiCoverageStatistics {
+public class UmiCoverageStatistics implements InputPort<UmiCoverageAndQuality>{
     public static final int MAX_UMI_COVERAGE = 65536;
     private final long[] weightedHistogram;
     private final int[] histogram;
@@ -28,7 +29,8 @@ public class UmiCoverageStatistics {
         return Math.min(numberOfBins - 1, (int) (Math.log(x) / Math.log(2)));
     }
 
-    public void update(UmiCoverageAndQuality umiCoverageAndQuality) {
+    @Override
+    public void put(UmiCoverageAndQuality umiCoverageAndQuality) {
         int coverage = umiCoverageAndQuality.getCoverage(),
                 bin = bin(coverage);
 

@@ -1,5 +1,6 @@
 package com.antigenomics.mist.umi;
 
+import cc.redberry.pipe.CUtils;
 import com.antigenomics.mist.TestUtil;
 import com.milaboratory.core.sequence.NSequenceWithQuality;
 import com.milaboratory.core.sequence.NucleotideSequence;
@@ -48,9 +49,11 @@ public class SyntheticUmiStats {
             }
         }
 
-        UmiStatistics umiStatistics = new UmiStatistics();
+        UmiCoverageStatistics umiCoverageStatistics = new UmiCoverageStatistics();
 
-        umiStatistics.update(umiAccumulator.getUmiInfoProvider());
+        umiCoverageStatistics.put(umiAccumulator.getUmiInfoProvider());
+
+        CUtils.drain();
 
         this.umiCoverageStatistics = umiStatistics.getUmiCoverageStatistics("test");
 

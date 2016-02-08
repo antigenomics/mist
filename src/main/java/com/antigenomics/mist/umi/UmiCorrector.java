@@ -43,7 +43,7 @@ public abstract class UmiCorrector<T extends SequenceRead> implements Processor<
                     tmp -> new UmiTree(numberOfUmis, maxMismatches,
                             errorPvalueThreshold, independentAssemblyFdrThreshold));
 
-            umiTree.update(umiCoverageAndQuality);
+            umiTree.put(umiCoverageAndQuality);
         }
     }
 

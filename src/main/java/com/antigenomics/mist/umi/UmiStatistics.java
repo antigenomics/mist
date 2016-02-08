@@ -29,7 +29,7 @@ public class UmiStatistics {
     public void update(UmiCoverageAndQuality umiCoverageAndQuality){
         umiCoverageModelBySample
                 .computeIfAbsent(umiCoverageAndQuality.getUmiTag().getPrimerId(), tmp -> new UmiCoverageStatistics())
-                .update(umiCoverageAndQuality);
+                .put(umiCoverageAndQuality);
     }
 
     public void update(OutputPort<UmiCoverageAndQuality> umiInfoProvider) {

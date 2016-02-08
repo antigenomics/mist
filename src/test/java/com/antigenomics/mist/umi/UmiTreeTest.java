@@ -64,7 +64,7 @@ public class UmiTreeTest {
 
         UmiTree umiTree = new UmiTree(numberOfUmis);
 
-        umiTree.update(syntheticUmiStats.getUmiAccumulator().getUmiInfoProvider());
+        umiTree.put(syntheticUmiStats.getUmiAccumulator().getUmiInfoProvider());
 
         umiTree.traverseAndCorrect();
 
