@@ -16,7 +16,6 @@
 package com.antigenomics.mist.umi;
 
 import cc.redberry.pipe.OutputPort;
-import com.antigenomics.mist.misc.HeaderUtil;
 import com.milaboratory.core.io.sequence.PairedRead;
 import com.milaboratory.core.io.sequence.SingleReadImpl;
 
