@@ -21,8 +21,7 @@ import cc.redberry.pipe.blocks.FilteringPort;
 import cc.redberry.pipe.blocks.Merger;
 import cc.redberry.pipe.blocks.ParallelProcessor;
 import cc.redberry.pipe.util.CountingOutputPort;
-import com.antigenomics.mist.misc.Speaker;
-import com.antigenomics.mist.preprocess.HeaderUtil;
+import com.antigenomics.mist.misc.HeaderUtil;
 import com.milaboratory.core.io.sequence.SequenceRead;
 import com.milaboratory.core.io.sequence.SequenceReader;
 

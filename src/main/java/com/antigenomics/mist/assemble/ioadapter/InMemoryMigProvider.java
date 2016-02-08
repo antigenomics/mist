@@ -16,7 +16,7 @@
 package com.antigenomics.mist.assemble.ioadapter;
 
 import com.antigenomics.mist.assemble.Mig;
-import com.antigenomics.mist.preprocess.HeaderUtil;
+import com.antigenomics.mist.misc.HeaderUtil;
 import com.antigenomics.mist.umi.UmiTag;
 import com.milaboratory.core.io.sequence.SequenceRead;
 import com.milaboratory.core.io.sequence.SequenceReader;

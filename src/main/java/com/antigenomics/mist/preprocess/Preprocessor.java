@@ -21,6 +21,7 @@ import cc.redberry.pipe.blocks.FilteringPort;
 import cc.redberry.pipe.blocks.Merger;
 import cc.redberry.pipe.blocks.ParallelProcessor;
 import cc.redberry.pipe.util.CountingOutputPort;
+import com.antigenomics.mist.misc.Reporter;
 import com.antigenomics.mist.misc.Speaker;
 import com.antigenomics.mist.primer.PrimerSearcherResult;
 import com.milaboratory.core.io.sequence.SequenceRead;
@@ -61,26 +62,9 @@ public class Preprocessor<T extends SequenceRead> implements Runnable {
 
         final CountingOutputPort<T> countingInput = new CountingOutputPort<>(bufferedInput);
 
-        Thread reporter = new Thread(new Runnable() {
-            long prevCount = -1;
-
+        Thread reporter = new Thread(new Reporter(countingInput) {
             @Override
-            public void run() {
-                try {
-                    while (!countingInput.isClosed()) {
-                        long count = countingInput.getCount();
-                        if (prevCount != count) {
-                            report();
-                            prevCount = count;
-                        }
-                        Thread.sleep(10000);
-                    }
-                } catch (InterruptedException e) {
-                    report();
-                }
-            }
-
-            private void report() {
+            protected void report() {
                 Speaker.INSTANCE.sout("Loaded " + countingInput.getCount() + " reads: " +
                         searchProcessor.getProcessedReadsCount() + " processed, " +
                         searchProcessor.getMatchedReadsCount() + " matched, " +

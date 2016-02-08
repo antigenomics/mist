@@ -13,8 +13,9 @@
  * limitations under the License.
  */
 
-package com.antigenomics.mist.preprocess;
+package com.antigenomics.mist.misc;
 
+import com.antigenomics.mist.assemble.SingleConsensus;
 import com.antigenomics.mist.primer.PrimerSearcherResult;
 import com.antigenomics.mist.umi.UmiTag;
 import com.milaboratory.core.io.sequence.SequenceRead;
@@ -27,7 +28,9 @@ public class HeaderUtil {
             FIELD_SEP = "_",
             PRIMER_ID_TOKEN = "PID" + FIELD_SEP,
             UMI_TOKEN = "UMI" + FIELD_SEP,
-            LOW_COVERAGE_TAG = "LOW_COV";
+            LOW_COVERAGE_TAG = "LOW_COV",
+            ASSEMBLY_TOKEN = "ASM" + FIELD_SEP,
+            CONSENSUS_HEADER_PREFIX = "@MIST";
 
     public static String updateHeader(String description, PrimerSearcherResult primerSearcherResult) {
         // TODO: check no tokens are present in description
@@ -42,8 +45,14 @@ public class HeaderUtil {
                         TOKEN_SEP + UMI_TOKEN +
                                 umiNSQ.getSequence().toString() +
                                 FIELD_SEP +
-                                umiNSQ.getQuality().toString() : "") +
-                TOKEN_SEP;
+                                umiNSQ.getQuality().toString() : "");
+    }
+
+    public static String updateHeader(String description, SingleConsensus consensus) {
+        return updateHeader(description, consensus.getUmiTag()) + TOKEN_SEP +
+                ASSEMBLY_TOKEN + consensus.getIndex() +
+                FIELD_SEP + consensus.getClusterId() +
+                FIELD_SEP + consensus.size();
     }
 
     public static String updateHeaderLowCov(String description) {
@@ -58,8 +67,7 @@ public class HeaderUtil {
         return description + TOKEN_SEP + PRIMER_ID_TOKEN +
                 primerId +
                 TOKEN_SEP + UMI_TOKEN +
-                umi.toString() +
-                TOKEN_SEP;
+                umi.toString();
     }
 
     public static ParsedHeader parsedHeader(String description) {
