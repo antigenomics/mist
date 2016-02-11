@@ -33,20 +33,20 @@ import java.io.IOException;
 public class UmiStatsTest {
     @Test
     public void syntheticTest() {
-        SyntheticUmiStats syntheticUmiStats = new SyntheticUmiStats(1000, 12, (byte) 35, 5.0, 1.0);
+        SyntheticUmiReadout syntheticUmiReadout = new SyntheticUmiReadout(1000, 12, (byte) 35, 5.0, 1.0);
 
-        UmiCoverageStatistics coverageStats = syntheticUmiStats.getUmiCoverageStatistics();
+        UmiCoverageStatistics coverageStats = syntheticUmiReadout.getUmiCoverageStatistics();
 
         System.out.println(coverageStats);
 
-        Assert.assertEquals((int) (syntheticUmiStats.getLog2CoverageMean() - 1), coverageStats.getThresholdEstimate());
+        Assert.assertEquals((int) (syntheticUmiReadout.getLog2CoverageMean() - 1), coverageStats.getThresholdEstimate());
 
         PoissonLogNormalEM.PoissonLogNormalModel densityModel = coverageStats.getWeightedDensityModel();
 
         Assert.assertTrue(Math.abs(densityModel.getLambda() -
-                Math.pow(10, -syntheticUmiStats.getMeanQual() / 10d) *
-                        syntheticUmiStats.getUmiLength() * Math.pow(2, syntheticUmiStats.getLog2CoverageMean())) < 0.05);
-        Assert.assertTrue(Math.abs(densityModel.getMu() - syntheticUmiStats.getLog2CoverageMean()) < 1.5);
+                Math.pow(10, -syntheticUmiReadout.getMeanQual() / 10d) *
+                        syntheticUmiReadout.getUmiLength() * Math.pow(2, syntheticUmiReadout.getLog2CoverageMean())) < 0.05);
+        Assert.assertTrue(Math.abs(densityModel.getMu() - syntheticUmiReadout.getLog2CoverageMean()) < 1.5);
     }
 
     @SuppressWarnings("unchecked")

@@ -1,17 +1,16 @@
 package com.antigenomics.mist.umi;
 
 import cc.redberry.pipe.OutputPort;
-import com.antigenomics.mist.TestUtil;
+import com.antigenomics.mist.ReadGenerator;
 import com.milaboratory.core.sequence.NSequenceWithQuality;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.core.sequence.SequenceQuality;
 import org.apache.commons.math3.distribution.NormalDistribution;
+import org.apache.commons.math3.random.Well19937c;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
-public class SyntheticUmiStats {
+public class SyntheticUmiReadout {
     private final int numberOfUmis, umiLength;
     private final byte meanQual;
     private final double log2CoverageMean, log2CoverageStd;
@@ -19,9 +18,15 @@ public class SyntheticUmiStats {
     private final UmiAccumulator umiAccumulator;
     private final UmiErrorAndDiversityModel umiErrorAndDiversityModel;
     private final List<UmiParentChildPair> reads;
-    private final List<NucleotideSequence> umis;
+    private final Set<NucleotideSequence> umis;
 
-    public SyntheticUmiStats(int numberOfUmis, int umiLength, byte meanQual, double log2CoverageMean, double log2CoverageStd) {
+    public SyntheticUmiReadout(int numberOfUmis, int umiLength, byte meanQual, double log2CoverageMean,
+                               double log2CoverageStd) {
+        this(numberOfUmis, umiLength, meanQual, log2CoverageMean, log2CoverageStd, 480011);
+    }
+
+    public SyntheticUmiReadout(int numberOfUmis, int umiLength, byte meanQual, double log2CoverageMean,
+                               double log2CoverageStd, int seed) {
         this.numberOfUmis = numberOfUmis;
         this.umiLength = umiLength;
         this.meanQual = meanQual;
@@ -31,20 +36,22 @@ public class SyntheticUmiStats {
         this.umiAccumulator = new UmiAccumulator();
         this.umiErrorAndDiversityModel = new UmiErrorAndDiversityModel();
         this.umiCoverageStatistics = new UmiCoverageStatistics();
-        this.umis = new ArrayList<>();
+        this.umis = new HashSet<>();
 
-        NormalDistribution norm = new NormalDistribution(TestUtil.randomGenerator,
+        ReadGenerator readGenerator = new ReadGenerator(seed);
+
+        NormalDistribution norm = new NormalDistribution(new Well19937c(seed),
                 log2CoverageMean, log2CoverageStd);
 
         for (int i = 0; i < numberOfUmis; i++) {
             int count = (int) Math.pow(2, norm.sample());
 
-            NucleotideSequence umiSeq = TestUtil.randomSequence(umiLength);
-            SequenceQuality quality = TestUtil.randomQuality(umiLength, meanQual);
+            NucleotideSequence umiSeq = readGenerator.randomSequence(umiLength);
+            SequenceQuality quality = readGenerator.randomQuality(umiLength, meanQual);
             umis.add(umiSeq);
 
             for (int j = 0; j < count; j++) {
-                NSequenceWithQuality read = TestUtil.mutate(new NSequenceWithQuality(umiSeq, quality));
+                NSequenceWithQuality read = readGenerator.mutate(new NSequenceWithQuality(umiSeq, quality));
                 umiAccumulator.put(read);
                 reads.add(new UmiParentChildPair(umiSeq, read));
             }
@@ -86,8 +93,8 @@ public class SyntheticUmiStats {
         return Collections.unmodifiableList(reads);
     }
 
-    public List<NucleotideSequence> getUmis() {
-        return Collections.unmodifiableList(umis);
+    public Set<NucleotideSequence> getUmis() {
+        return Collections.unmodifiableSet(umis);
     }
 
     public UmiAccumulator getUmiAccumulator() {
@@ -121,7 +128,9 @@ public class SyntheticUmiStats {
 
 
         public UmiCoverageAndQuality getParentCoverageAndQuality() {
-            return umiAccumulator.getAt(new UmiTag(parent));
+            UmiTag parentTag = new UmiTag(parent);
+            return umiAccumulator.hasTag(parentTag) ? umiAccumulator.getAt(new UmiTag(parent)) :
+                    new UmiCoverageAndQuality(parentTag, 0, new SequenceQuality(new byte[parent.size()]));
         }
 
         public UmiCoverageAndQuality getChildCoverageAndQuality() {

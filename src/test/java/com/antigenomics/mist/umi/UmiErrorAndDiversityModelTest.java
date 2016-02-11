@@ -1,6 +1,6 @@
 package com.antigenomics.mist.umi;
 
-import com.antigenomics.mist.TestUtil;
+import com.antigenomics.mist.ReadGenerator;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.core.sequence.SequenceQuality;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
@@ -12,6 +12,8 @@ import java.util.Arrays;
 public class UmiErrorAndDiversityModelTest {
     @Test
     public void diversityTest() {
+        ReadGenerator readGenerator = new ReadGenerator();
+
         int size = 10, numberOfUmis = 10000;
 
         UmiErrorAndDiversityModel umiErrorAndDiversityModel = new UmiErrorAndDiversityModel();
@@ -20,7 +22,7 @@ public class UmiErrorAndDiversityModelTest {
         Arrays.fill(quality, SequenceQuality.GOOD_QUALITY_VALUE);
 
         for (int i = 0; i < numberOfUmis; i++) {
-            NucleotideSequence umi = TestUtil.randomSequence(size);
+            NucleotideSequence umi = readGenerator.randomSequence(size);
 
             umiErrorAndDiversityModel.put(new UmiCoverageAndQuality(new UmiTag(umi),
                     1, new SequenceQuality(quality)));
@@ -34,15 +36,15 @@ public class UmiErrorAndDiversityModelTest {
 
     @Test
     public void errorPvalueTest() {
-        SyntheticUmiStats syntheticUmiStats = new SyntheticUmiStats(10000, 12, (byte) 35, 4.0, 1.0);
+        SyntheticUmiReadout syntheticUmiReadout = new SyntheticUmiReadout(10000, 12, (byte) 35, 4.0, 1.0);
 
-        UmiErrorAndDiversityModel umiErrorAndDiversityModel = syntheticUmiStats.getUmiErrorAndDiversityModel();
+        UmiErrorAndDiversityModel umiErrorAndDiversityModel = syntheticUmiReadout.getUmiErrorAndDiversityModel();
 
         SummaryStatistics errorStatSummary = new SummaryStatistics();
 
-        syntheticUmiStats.getReads()
+        syntheticUmiReadout.getReads()
                 .stream()
-                .filter(SyntheticUmiStats.UmiParentChildPair::isError)
+                .filter(SyntheticUmiReadout.UmiParentChildPair::isError)
                 .map(x -> umiErrorAndDiversityModel.errorPValue(x.getParentCoverageAndQuality(),
                         x.getChildCoverageAndQuality()))
                 .forEach(errorStatSummary::addValue);
@@ -54,35 +56,37 @@ public class UmiErrorAndDiversityModelTest {
 
     @Test
     public void assemblyProbTest() {
-        SyntheticUmiStats syntheticUmiStats = new SyntheticUmiStats(10000, 12, (byte) 35, 4.0, 1.0);
+        SyntheticUmiReadout syntheticUmiReadout = new SyntheticUmiReadout(10000, 12, (byte) 35, 4.0, 1.0);
 
-        UmiErrorAndDiversityModel umiErrorAndDiversityModel = syntheticUmiStats.getUmiErrorAndDiversityModel();
+        UmiErrorAndDiversityModel umiErrorAndDiversityModel = syntheticUmiReadout.getUmiErrorAndDiversityModel();
 
         SummaryStatistics assemblyProbSummary = new SummaryStatistics();
 
-        syntheticUmiStats.getReads()
+        syntheticUmiReadout.getReads()
                 .stream()
-                .filter(SyntheticUmiStats.UmiParentChildPair::isError)
+                .filter(SyntheticUmiReadout.UmiParentChildPair::isError)
                 .map(x -> umiErrorAndDiversityModel.independentAssemblyProbability(x.getParent(),
                         x.getChild().getSequence()))
                 .forEach(assemblyProbSummary::addValue);
 
         System.out.println("Assembly probability (synthetic, errors only):\n" + assemblyProbSummary);
 
-        Assert.assertTrue((assemblyProbSummary.getMean() * syntheticUmiStats.getNumberOfUmis()) < 0.05);
+        Assert.assertTrue((assemblyProbSummary.getMean() * syntheticUmiReadout.getNumberOfUmis()) < 0.05);
     }
 
     @Test
     public void shortUmiAssemblyProbTest() {
-        SyntheticUmiStats syntheticUmiStats = new SyntheticUmiStats(1000, 4, (byte) 40, 0.0, 1e-16);
+        ReadGenerator readGenerator = new ReadGenerator();
 
-        UmiErrorAndDiversityModel umiErrorAndDiversityModel = syntheticUmiStats.getUmiErrorAndDiversityModel();
+        SyntheticUmiReadout syntheticUmiReadout = new SyntheticUmiReadout(1000, 4, (byte) 40, 0.0, 1e-16);
+
+        UmiErrorAndDiversityModel umiErrorAndDiversityModel = syntheticUmiReadout.getUmiErrorAndDiversityModel();
 
         SummaryStatistics assemblyProbSummary = new SummaryStatistics();
 
-        syntheticUmiStats.getUmis().stream().map(x ->
+        syntheticUmiReadout.getUmis().stream().map(x ->
                 umiErrorAndDiversityModel.independentAssemblyProbability(x,
-                        TestUtil.randomSequence(4))).forEach(assemblyProbSummary::addValue);
+                        readGenerator.randomSequence(4))).forEach(assemblyProbSummary::addValue);
 
         System.out.println("Assembly probability (synthetic, short UMI):\n" + assemblyProbSummary);
         Assert.assertTrue(Math.abs(assemblyProbSummary.getMean() - 0.5) <=

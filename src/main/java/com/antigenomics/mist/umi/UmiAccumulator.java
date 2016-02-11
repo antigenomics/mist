@@ -17,6 +17,7 @@ package com.antigenomics.mist.umi;
 
 import cc.redberry.pipe.OutputPort;
 import com.milaboratory.core.sequence.NSequenceWithQuality;
+import com.milaboratory.core.sequence.SequenceQuality;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -49,8 +50,14 @@ public class UmiAccumulator {
         umiCoverageAndQualityFactory.append(umiNSQ.getQuality());
     }
 
+    public boolean hasTag(UmiTag umiTag){
+        return umiInfoFactoryMap.containsKey(umiTag);
+    }
+
     public UmiCoverageAndQuality getAt(UmiTag umiTag) {
-        if (!umiInfoFactoryMap.containsKey(umiTag)) {
+        if (!hasTag(umiTag)) {
+            // Do it strictly here, as some of the downstream analysis will be mad if it encounters 0 quality
+            // Should never happen in real data
             throw new IllegalArgumentException("Tag " + umiTag + " is not in the accumulator.");
         }
 

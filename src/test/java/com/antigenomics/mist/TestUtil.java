@@ -36,9 +36,6 @@ import java.util.Random;
 import java.util.zip.GZIPInputStream;
 
 public class TestUtil {
-    public static RandomGenerator randomGenerator = new Well19937c(51102);
-    public static final Random rnd = new Random(480011);
-
     public static InputStream resourceAsStream(String name) throws IOException {
         InputStream inputStream = TestUtil.class.getClassLoader().getResourceAsStream(name);
 
@@ -68,41 +65,5 @@ public class TestUtil {
 
     private static boolean barcodeExists(String barcode) {
         return barcode.length() > 0 && !barcode.equals(".");
-    }
-
-    public static NucleotideSequence randomSequence(int length) {
-        byte[] data = new byte[length];
-
-        for (int i = 0; i < length; i++) {
-            data[i] = (byte) rnd.nextInt(4);
-        }
-
-        return new NucleotideSequence(data);
-    }
-
-    public static SequenceQuality randomQuality(int length, byte mean) {
-        byte[] qual = new byte[length];
-        PoissonDistribution poissonDistribution = new PoissonDistribution(randomGenerator,
-                Math.max(1, 40 - mean), PoissonDistribution.DEFAULT_EPSILON, PoissonDistribution.DEFAULT_MAX_ITERATIONS);
-
-        for (int i = 0; i < length; i++) {
-            qual[i] = (byte) Math.min(Math.max(2, 40 - poissonDistribution.sample()), 40);
-        }
-
-        return new SequenceQuality(qual);
-    }
-
-    public static NSequenceWithQuality mutate(NSequenceWithQuality nSequenceWithQuality) {
-        byte[] bases = new byte[nSequenceWithQuality.size()];
-
-        for (int i = 0; i < nSequenceWithQuality.size(); i++) {
-            if (rnd.nextDouble() > 4 * nSequenceWithQuality.getQuality().probabilityOfErrorAt(i) / 3) {
-                bases[i] = nSequenceWithQuality.getSequence().codeAt(i);
-            } else {
-                bases[i] = (byte) rnd.nextInt(4);
-            }
-        }
-
-        return new NSequenceWithQuality(new NucleotideSequence(bases), nSequenceWithQuality.getQuality());
     }
 }
