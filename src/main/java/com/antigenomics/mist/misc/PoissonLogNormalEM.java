@@ -111,12 +111,12 @@ public class PoissonLogNormalEM {
             double xprev = x;
             x += 0.5 * ddf * f * f / df / df / df - f / df;
 
-            if (Math.abs(x - xprev) < tol) {
+            if (!Double.isFinite(x) || Math.abs(x - xprev) < tol) {
                 break;
             }
         }
 
-        return Math.exp(-x);
+        return Double.isFinite(x) ? Math.exp(-x) : 0;
     }
 
     private static double f(double x, double T, double K) {
@@ -226,6 +226,12 @@ public class PoissonLogNormalEM {
 
         public double getLogNormalRatio() {
             return logNormalPrior;
+        }
+
+        @Override
+        public String toString() {
+            return (float) logNormalPrior + " * LN(" + mu + ", " + sigma + ") + " +
+                    (1 - (float) logNormalPrior) + " * Poiss(" + lambda + ")";
         }
     }
 }

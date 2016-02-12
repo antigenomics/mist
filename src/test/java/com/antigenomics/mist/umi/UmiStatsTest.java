@@ -17,6 +17,7 @@ package com.antigenomics.mist.umi;
 
 import cc.redberry.pipe.CUtils;
 import cc.redberry.pipe.blocks.ParallelProcessor;
+import cc.redberry.pipe.util.DummyInputPort;
 import com.antigenomics.mist.TestUtil;
 import com.antigenomics.mist.misc.PoissonLogNormalEM;
 import com.antigenomics.mist.preprocess.ReadWrapperFactory;
@@ -33,25 +34,35 @@ import java.io.IOException;
 public class UmiStatsTest {
     @Test
     public void syntheticTest() {
-        SyntheticUmiReadout syntheticUmiReadout = new SyntheticUmiReadout(1000, 12, (byte) 35, 5.0, 1.0);
+        int[] numberOfUmisValues = new int[]{100, 1000, 10000};
+        byte[] qualityValues = new byte[]{(byte) 25, (byte) 30, (byte) 35};
+        double[] peakPositionValues = new double[]{4.0, 5.0, 6.0};
 
-        UmiCoverageStatistics coverageStats = syntheticUmiReadout.getUmiCoverageStatistics();
+        int i = 0;
+        for (int numberOfUmis : numberOfUmisValues) {
+            for (byte quality : qualityValues) {
+                for (double peakPosition : peakPositionValues) {
+                    System.out.println("Synthetic UMI coverage statistic test#" + (++i) + ":\n" +
+                            "numberOfUmis=" + numberOfUmis + "\n" +
+                            "quality=" + quality + "\n" +
+                            "peakPosition=" + peakPosition);
 
-        System.out.println(coverageStats);
+                    SyntheticUmiReadout syntheticUmiReadout = new SyntheticUmiReadout(numberOfUmis,
+                            12, quality, peakPosition, 1.0);
 
-        Assert.assertEquals((int) (syntheticUmiReadout.getLog2CoverageMean() - 1), coverageStats.getThresholdEstimate());
+                    UmiCoverageStatistics coverageStats = syntheticUmiReadout.getUmiCoverageStatistics();
 
-        PoissonLogNormalEM.PoissonLogNormalModel densityModel = coverageStats.getWeightedDensityModel();
-
-        Assert.assertTrue(Math.abs(densityModel.getLambda() -
-                Math.pow(10, -syntheticUmiReadout.getMeanQual() / 10d) *
-                        syntheticUmiReadout.getUmiLength() * Math.pow(2, syntheticUmiReadout.getLog2CoverageMean())) < 0.05);
-        Assert.assertTrue(Math.abs(densityModel.getMu() - syntheticUmiReadout.getLog2CoverageMean()) < 1.5);
+                    testHistogramAndModelConsistency(coverageStats);
+                }
+            }
+        }
     }
 
     @SuppressWarnings("unchecked")
     @Test
     public void realDataTest() throws IOException, InterruptedException {
+        System.out.println("Real data UMI coverage statistic test");
+
         PrimerSearcherArray primerSearcherArray = TestUtil.readBarcodes("umi_barcodes.txt");
 
         SearchProcessor searchProcessor = new SearchProcessor(
@@ -67,17 +78,22 @@ public class UmiStatsTest {
                 reader, searchProcessor, Runtime.getRuntime().availableProcessors()
         );
 
-        while (processor.take() != null) {
-
-        }
+        CUtils.drain(processor, DummyInputPort.INSTANCE);
 
         UmiCoverageStatistics coverageStats = new UmiCoverageStatistics();
 
         CUtils.drain(searchProcessor.getUmiAccumulator().getOutputPort(), coverageStats);
 
-        System.out.println("threshold=" + coverageStats.getThresholdEstimate());
+        Assert.assertEquals(8, coverageStats.getThresholdEstimate());
 
+        testHistogramAndModelConsistency(coverageStats);
+    }
+
+    private static void testHistogramAndModelConsistency(UmiCoverageStatistics coverageStats) {
         PoissonLogNormalEM.PoissonLogNormalModel densityModel = coverageStats.getWeightedDensityModel();
+
+        System.out.println(coverageStats);
+        System.out.println(densityModel);
 
         double unweightedError = 0, weightedError = 0,
                 weightedSumHist = 0, weightedSumModel = 0;
@@ -85,13 +101,6 @@ public class UmiStatsTest {
         int i = 0;
         for (; i < UmiCoverageStatistics.MAX_UMI_COVERAGE; i++) {
             int x = (int) Math.pow(2, i);
-            
-            /*
-            System.out.println(x + "\t" +
-                            coverageStats.getDensity(x) + "\t" + coverageStats.getWeightedDensity(x) + "\t" +
-                            densityModel.computeCoverageHistogramDensity(x) + "\t" +
-                            densityModel.computeCoverageHistogramDensityWeighted(x)
-            );*/
 
             unweightedError += Math.abs(coverageStats.getDensity(x) -
                     densityModel.computeCoverageHistogramDensity(x));

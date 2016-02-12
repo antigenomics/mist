@@ -108,15 +108,15 @@ public class UmiCoverageStatistics implements InputPort<UmiCoverageAndQuality> {
 
     @Override
     public String toString() {
-        String str = "coverage\tweighted\tunweighted\testimate\n";
+        String str = "coverage\tweighted\tunweighted\testimate";
 
         int estimate = (int) (Math.log(getThresholdEstimate()) / Math.log(2));
 
         for (int i = 0; i <= Math.log(MAX_UMI_COVERAGE) / Math.log(2); i++) {
             int count = (int) Math.pow(2, i);
 
-            str += count + "\t" + getWeightedCount(count) + "\t" + getCount(count) + "\t" +
-                    (i == estimate ? "*" : " ") + "\n";
+            str += "\n" + count + "\t" + getWeightedCount(count) + "\t" + getCount(count) + "\t" +
+                    (i == estimate ? "*" : " ");
         }
 
         return str;
