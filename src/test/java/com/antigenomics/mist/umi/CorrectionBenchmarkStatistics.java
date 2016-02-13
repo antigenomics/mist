@@ -1,6 +1,6 @@
 package com.antigenomics.mist.umi;
 
-public class CorrectionBenchmarkStatistics {
+public class CorrectionBenchmarkStatistics implements Comparable<CorrectionBenchmarkStatistics> {
     private final int totalErrors, correctedErrors, weakCorrectedErrors,
             totalGood, miscorrectedGood;
 
@@ -43,5 +43,18 @@ public class CorrectionBenchmarkStatistics {
 
     public int getMiscorrectedGood() {
         return miscorrectedGood;
+    }
+
+    @Override
+    public String toString() {
+        return "TP=" + (float) getTruePositiveRate() +
+                ", TP*=" + (float) getWeakTruePositiveRate() +
+                ", FP=" + (float) getFalsePositiveRate();
+    }
+
+    @Override
+    public int compareTo(CorrectionBenchmarkStatistics o) {
+        int res = Double.compare(getTruePositiveRate(), o.getTruePositiveRate());
+        return res == 0 ? -Double.compare(getFalsePositiveRate(), o.getFalsePositiveRate()) : res;
     }
 }
