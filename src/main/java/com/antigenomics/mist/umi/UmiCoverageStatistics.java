@@ -11,6 +11,7 @@ public class UmiCoverageStatistics implements InputPort<UmiCoverageAndQuality> {
     private final int numberOfBins;
     private final PoissonLogNormalEM poissonLogNormalEM;
     private int total, totalCoverage;
+    private PoissonLogNormalEM.PoissonLogNormalModel weightedDensityModel;
 
     public UmiCoverageStatistics() {
         this(MAX_UMI_COVERAGE);
@@ -47,13 +48,7 @@ public class UmiCoverageStatistics implements InputPort<UmiCoverageAndQuality> {
         // TODO: summarize?
     }
 
-    /**
-     * TODO
-     *
-     * @return
-     * @deprecated Use a more robust method to estimate threshold
-     */
-    public int getThresholdEstimate() {
+    public int getSimpleThresholdEstimate() {
         int indexOfMax = -1;
         long maxValue = -1;
 
@@ -67,6 +62,16 @@ public class UmiCoverageStatistics implements InputPort<UmiCoverageAndQuality> {
         return (int) Math.pow(2, indexOfMax / 2);
     }
 
+    public int getModelThresholdEstimate() {
+        return getWeightedDensityModel().estimateThreshold();
+    }
+
+    public int getThresholdEstimate() {
+        int estimate = getModelThresholdEstimate();
+
+        return estimate >= 0 ? estimate : getSimpleThresholdEstimate();
+    }
+
     /**
      * TODO
      *
@@ -76,7 +81,7 @@ public class UmiCoverageStatistics implements InputPort<UmiCoverageAndQuality> {
     @Deprecated
     public int getObservedDiversityEstimate() {
         int observedDiversity = 0;
-        for (int i = getThresholdEstimate(); i < numberOfBins; i++) {
+        for (int i = getSimpleThresholdEstimate(); i < numberOfBins; i++) {
             observedDiversity += histogram[i];
         }
         return observedDiversity;
@@ -99,7 +104,10 @@ public class UmiCoverageStatistics implements InputPort<UmiCoverageAndQuality> {
     }
 
     public PoissonLogNormalEM.PoissonLogNormalModel getWeightedDensityModel() {
-        return poissonLogNormalEM.run(getThresholdEstimate());
+        if (weightedDensityModel == null) {
+            weightedDensityModel = poissonLogNormalEM.run(getSimpleThresholdEstimate());
+        }
+        return weightedDensityModel;
     }
 
     public int getTotal() {
@@ -108,15 +116,15 @@ public class UmiCoverageStatistics implements InputPort<UmiCoverageAndQuality> {
 
     @Override
     public String toString() {
-        String str = "coverage\tweighted\tunweighted\testimate";
+        String str = "coverage\tweighted\tunweighted\testimate_simple\testimate_model";
 
-        int estimate = (int) (Math.log(getThresholdEstimate()) / Math.log(2));
+        int simpleEstimate = (int) (Math.log(getThresholdEstimate()) / Math.log(2));
 
         for (int i = 0; i <= Math.log(MAX_UMI_COVERAGE) / Math.log(2); i++) {
             int count = (int) Math.pow(2, i);
 
             str += "\n" + count + "\t" + getWeightedCount(count) + "\t" + getCount(count) + "\t" +
-                    (i == estimate ? "*" : " ");
+                    (i == simpleEstimate ? "*" : " ");
         }
 
         return str;
