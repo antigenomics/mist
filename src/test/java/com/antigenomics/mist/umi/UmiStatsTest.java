@@ -33,8 +33,47 @@ import java.io.IOException;
 
 public class UmiStatsTest {
     @Test
+    public void negativeThresholdTest() {
+        double[] peakPositionValues = new double[]{1e-6, 1.0, 1.5};
+
+        int i = 0;
+        for (double peakPosition : peakPositionValues) {
+            System.out.println("Synthetic UMI threshold test (negative) #" + (++i) + ":\n" +
+                    "peakPosition=" + peakPosition);
+            SyntheticUmiReadout syntheticUmiReadout = new SyntheticUmiReadout(1000,
+                    12, (byte) 30, peakPosition, 0.5);
+
+            UmiCoverageStatistics coverageStats = syntheticUmiReadout.getUmiCoverageStatistics();
+
+            System.out.println(coverageStats.getThresholdEstimate());
+
+            Assert.assertTrue(coverageStats.getModelThresholdEstimate() < 0);
+            Assert.assertTrue(coverageStats.getThresholdEstimate() == 1.0);
+        }
+    }
+
+    @Test
+    public void thresholdTest() {
+        double[] peakPositionValues = new double[]{3.0, 4.0, 5.0, 6.0};
+
+        int i = 0;
+        for (double peakPosition : peakPositionValues) {
+            System.out.println("Synthetic UMI threshold test (positive) #" + (++i) + ":\n" +
+                    "peakPosition=" + peakPosition);
+
+            SyntheticUmiReadout syntheticUmiReadout = new SyntheticUmiReadout(1000,
+                    12, (byte) 30, peakPosition, 1.0);
+
+            UmiCoverageStatistics coverageStats = syntheticUmiReadout.getUmiCoverageStatistics();
+
+            Assert.assertTrue(coverageStats.getSimpleThresholdEstimate() <= coverageStats.getThresholdEstimate());
+            Assert.assertTrue(coverageStats.getThresholdEstimate() <= Math.pow(2, peakPosition - 1));
+        }
+    }
+
+    @Test
     public void syntheticTest() {
-        int[] numberOfUmisValues = new int[]{100, 1000, 10000};
+        int[] numberOfUmisValues = new int[]{500, 1000, 5000};
         byte[] qualityValues = new byte[]{(byte) 25, (byte) 30, (byte) 35};
         double[] peakPositionValues = new double[]{4.0, 5.0, 6.0};
 
@@ -53,6 +92,14 @@ public class UmiStatsTest {
                     UmiCoverageStatistics coverageStats = syntheticUmiReadout.getUmiCoverageStatistics();
 
                     testHistogramAndModelConsistency(coverageStats);
+
+                    // Usually peak position is always lower than expected due to
+                    // errors (peak parameter just specifies mean coverage, errors are applied after)
+                    // Note that Mu parameter is for log-normal model, we need to adjust it as log2 is used in
+                    // generator
+                    Assert.assertTrue(Math.abs(peakPosition -
+                            coverageStats.getWeightedDensityModel().getMu() / Math.log(2)) <
+                            1.0);
                 }
             }
         }
@@ -84,9 +131,10 @@ public class UmiStatsTest {
 
         CUtils.drain(searchProcessor.getUmiAccumulator().getOutputPort(), coverageStats);
 
-        Assert.assertEquals(8, coverageStats.getThresholdEstimate());
-
         testHistogramAndModelConsistency(coverageStats);
+
+        System.out.println(coverageStats.getModelThresholdEstimate());
+        Assert.assertEquals(36, coverageStats.getThresholdEstimate());
     }
 
     private static void testHistogramAndModelConsistency(UmiCoverageStatistics coverageStats) {

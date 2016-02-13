@@ -3,7 +3,6 @@ package com.antigenomics.mist.misc;
 import com.antigenomics.mist.umi.UmiCoverageStatistics;
 import org.apache.commons.math3.distribution.LogNormalDistribution;
 import org.apache.commons.math3.distribution.PoissonDistribution;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -11,7 +10,7 @@ import java.util.Map;
 // non thread-safe
 public class PoissonLogNormalEM {
     private static final int N_EM_PASSES = 100;
-    private static final double JITTER = 1e-6;
+    private static final double JITTER = 1e-21;
     private final Map<Integer, Element> elements = new HashMap<>();
 
     public PoissonLogNormalEM() {
@@ -54,6 +53,11 @@ public class PoissonLogNormalEM {
                 logNormalProbSum += logNormalFactor;
                 poissonProbSum += poissonFactor;
             }
+
+            // Zero division common here
+
+            logNormalProbSum += JITTER;
+            poissonProbSum += JITTER;
 
             logNormalMean /= logNormalEstimateProbSum;
             // <x^2> - <x>^2
@@ -190,8 +194,29 @@ public class PoissonLogNormalEM {
         }
 
         public int estimateThreshold() {
-            // TODO
-            throw new NotImplementedException();
+            int prevThreshold = -1;
+            for (double pValue : new double[]{0.001, 0.01, 0.05}) {
+                int threshold = estimateThreshold(0.05, pValue);
+                if (threshold < 0) {
+                    return prevThreshold;
+                } else {
+                    prevThreshold = threshold;
+                }
+            }
+            return prevThreshold;
+        }
+
+        public int estimateThreshold(double falsePositiveThreshold, double falseNegativeThreshold) {
+            int fpX = poissonDistribution.inverseCumulativeProbability(Math.min(1.0,
+                    1.0 - falsePositiveThreshold +
+                            logNormalPrior * logNormalDistribution.cumulativeProbability(1))), // missing density
+                    fnX = (int) logNormalDistribution.inverseCumulativeProbability(falseNegativeThreshold);
+
+            if (fpX > fnX) {
+                return -1;
+            }
+
+            return (fpX + fnX) / 2;
         }
 
         public double computeCoverageHistogramDensity(int x) {
@@ -218,6 +243,10 @@ public class PoissonLogNormalEM {
 
         public double getMu() {
             return mu;
+        }
+
+        public int getPeakPosition() {
+            return (int) Math.exp(mu);
         }
 
         public double getSigma() {
