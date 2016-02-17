@@ -91,7 +91,7 @@ public class ExternalSortMigProvider<T extends SequenceRead> implements MigProvi
 
     @SuppressWarnings("unchecked")
     @Override
-    public Mig<T> take() {
+    public synchronized Mig<T> take() {
         List<T> reads = new ArrayList<>();
 
         if (lastRead != null) {
