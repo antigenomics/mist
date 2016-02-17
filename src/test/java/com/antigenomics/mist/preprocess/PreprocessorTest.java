@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class PreprocessorTest {
     @SuppressWarnings("unchecked")
     @Test
-    public void readDataTest() throws IOException {
+    public void readDataTest() throws IOException, InterruptedException {
         PrimerSearcherArray primerSearcherArray = TestUtil.readBarcodes("umi_barcodes.txt");
 
         SearchProcessor searchProcessor = new SearchProcessor(
@@ -53,10 +53,13 @@ public class PreprocessorTest {
 
         CountingInputPort matchedReads = new CountingInputPort();
 
-        Preprocessor preprocessor = new Preprocessor(reader,
-                matchedReads, searchProcessor, new PairedReadGroomer(true));
+        PreprocessorPipeline preprocessorPipeline = new PreprocessorPipeline(searchProcessor,
+                new PairedReadGroomer(true));
 
-        preprocessor.run();
+        preprocessorPipeline.setInput(reader);
+        preprocessorPipeline.setOutput(matchedReads);
+
+        preprocessorPipeline.run();
 
         Assert.assertTrue(totalReads > 0);
         Assert.assertEquals(totalReads, searchProcessor.getProcessedReadsCount());
