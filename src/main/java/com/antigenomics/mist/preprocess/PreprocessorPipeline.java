@@ -15,6 +15,7 @@
 
 package com.antigenomics.mist.preprocess;
 
+import cc.redberry.pipe.InputPort;
 import cc.redberry.pipe.OutputPort;
 import cc.redberry.pipe.blocks.FilteringPort;
 import cc.redberry.pipe.blocks.ParallelProcessor;
@@ -23,7 +24,7 @@ import com.antigenomics.mist.misc.Speaker;
 import com.antigenomics.mist.primer.PrimerSearcherResult;
 import com.milaboratory.core.io.sequence.SequenceRead;
 
-public class PreprocessorPipeline<S extends SequenceRead> extends PipelineBlock<S> {
+public class PreprocessorPipeline<S extends SequenceRead> extends PipelineBlock<S, S> {
     private final SearchProcessor<S> searchProcessor;
     private final ReadGroomer<S> readGroomer;
 
@@ -34,9 +35,9 @@ public class PreprocessorPipeline<S extends SequenceRead> extends PipelineBlock<
 
     @SuppressWarnings("unchecked")
     @Override
-    protected OutputPort<S> prepareProcessor() {
+    protected OutputPort<S> prepareProcessor(OutputPort<S> input, InputPort<S> discarded) {
         final OutputPort<PrimerSearcherResult> searchResults = new ParallelProcessor<>(getInput(),
-                searchProcessor, PipelineBlock.PROCESSOR_BUFFER_SIZE, numberOfThreads);
+                searchProcessor, numberOfThreads);
 
         final FilteringPort<PrimerSearcherResult> filteredResults = new FilteringPort<>(searchResults,
                 new ResultFilter());
@@ -44,7 +45,7 @@ public class PreprocessorPipeline<S extends SequenceRead> extends PipelineBlock<
         filteredResults.attachDiscardPort(object -> getDiscarded().put((S) object.getReadWrapper().getRead()));
 
         return new ParallelProcessor<>(filteredResults,
-                readGroomer, PipelineBlock.PROCESSOR_BUFFER_SIZE, numberOfThreads);
+                readGroomer, numberOfThreads);
     }
 
     @Override

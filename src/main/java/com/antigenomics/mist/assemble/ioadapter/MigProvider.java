@@ -19,5 +19,11 @@ import cc.redberry.pipe.OutputPort;
 import com.antigenomics.mist.assemble.Mig;
 import com.milaboratory.core.io.sequence.SequenceRead;
 
-public interface MigProvider<T extends SequenceRead> extends OutputPort<Mig<T>> {
+/**
+ * Mig provider is thread-unsafe, and no synchronizaiton is added to "take" method.
+ * So it should be used via buffer.
+ *
+ * @param <S>
+ */
+public interface MigProvider<S extends SequenceRead> extends OutputPort<Mig<S>> {
 }

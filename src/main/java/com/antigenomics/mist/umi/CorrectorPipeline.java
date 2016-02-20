@@ -15,6 +15,7 @@
 
 package com.antigenomics.mist.umi;
 
+import cc.redberry.pipe.InputPort;
 import cc.redberry.pipe.OutputPort;
 import cc.redberry.pipe.blocks.FilteringPort;
 import cc.redberry.pipe.blocks.ParallelProcessor;
@@ -22,19 +23,19 @@ import com.antigenomics.mist.PipelineBlock;
 import com.antigenomics.mist.misc.HeaderUtil;
 import com.milaboratory.core.io.sequence.SequenceRead;
 
-public class CorrectorPipeline<T extends SequenceRead> extends PipelineBlock<T> {
-    private final UmiCorrector<T> umiCorrector;
+public class CorrectorPipeline<S extends SequenceRead> extends PipelineBlock<S, S> {
+    private final UmiCorrector<S> umiCorrector;
 
-    public CorrectorPipeline(UmiCorrector<T> umiCorrector) {
+    public CorrectorPipeline(UmiCorrector<S> umiCorrector) {
         this.umiCorrector = umiCorrector;
     }
 
     @Override
-    protected OutputPort<T> prepareProcessor() {
-        OutputPort<T> correctorResults = new ParallelProcessor<>(getInput(),
-                umiCorrector, PipelineBlock.PROCESSOR_BUFFER_SIZE, numberOfThreads);
+    protected OutputPort<S> prepareProcessor(OutputPort<S> input, InputPort<S> discarded) {
+        OutputPort<S> correctorResults = new ParallelProcessor<>(input,
+                umiCorrector, numberOfThreads);
 
-        FilteringPort<T> filteredReads = new FilteringPort<>(correctorResults,
+        FilteringPort<S> filteredReads = new FilteringPort<>(correctorResults,
                 read -> read.getRead(0).getDescription().contains(HeaderUtil.LOW_COVERAGE_TAG));
 
         filteredReads.attachDiscardPort(getDiscarded());

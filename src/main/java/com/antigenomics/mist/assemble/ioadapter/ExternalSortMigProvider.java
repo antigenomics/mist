@@ -32,24 +32,24 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
-public class ExternalSortMigProvider<T extends SequenceRead> implements MigProvider<T> {
+public class ExternalSortMigProvider<S extends SequenceRead> implements MigProvider<S> {
     private static final int MAX_OPEN_FILES = 10;
     private final CloseableIterator<SequenceRead> sortedReads;
-    private T lastRead = null;
+    private S lastRead = null;
     private UmiTag lastTag = null;
 
-    public ExternalSortMigProvider(SequenceReader<T> reader) throws IOException {
+    public ExternalSortMigProvider(SequenceReader<S> reader) throws IOException {
         this(reader, File.createTempFile("mist_reads_" + UUID.randomUUID().toString(), ".bin"), 100000);
     }
 
-    public ExternalSortMigProvider(SequenceReader<T> reader,
+    public ExternalSortMigProvider(SequenceReader<S> reader,
                                    File tempFile, int chunkSize) throws IOException {
         // Serialize to temp file using Kryo
         Kryo kryo = new Kryo();
 
         Output output = new Output(new FileOutputStream(tempFile));
 
-        T read;
+        S read;
 
         while ((read = reader.take()) != null) {
             kryo.writeObject(output, read);
@@ -91,15 +91,15 @@ public class ExternalSortMigProvider<T extends SequenceRead> implements MigProvi
 
     @SuppressWarnings("unchecked")
     @Override
-    public Mig<T> take() {
-        List<T> reads = new ArrayList<>();
+    public Mig<S> take() {
+        List<S> reads = new ArrayList<>();
 
         if (lastRead != null) {
             reads.add(lastRead);
         }
 
         while (sortedReads.hasNext()) {
-            lastRead = (T) sortedReads.next();
+            lastRead = (S) sortedReads.next();
             UmiTag tag = HeaderUtil.parsedHeader(lastRead.getRead(0).getDescription()).toUmiTag();
             boolean sameTag = lastTag == null || tag.equals(lastTag);
             lastTag = tag;

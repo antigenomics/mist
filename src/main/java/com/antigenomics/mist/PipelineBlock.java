@@ -4,32 +4,56 @@ import cc.redberry.pipe.CUtils;
 import cc.redberry.pipe.InputPort;
 import cc.redberry.pipe.OutputPort;
 import cc.redberry.pipe.blocks.Merger;
-import cc.redberry.pipe.util.CountingOutputPort;
 import cc.redberry.pipe.util.DummyInputPort;
-import com.milaboratory.core.io.sequence.SequenceRead;
-import com.milaboratory.core.io.sequence.SequenceReader;
-import com.milaboratory.core.io.sequence.SequenceWriter;
 
-public abstract class PipelineBlock<S extends SequenceRead> {
-    public static final int PROCESSOR_BUFFER_SIZE = 2048;
+public abstract class PipelineBlock<I, O> {
     private static final int INPUT_BUFFER_SIZE = 1024;
 
+    public PipelineBlock() {
+    }
+
+    public PipelineBlock(OutputPort<I> input, InputPort<O> output) {
+        this.input = input;
+        this.output = output;
+    }
+
+    public PipelineBlock(OutputPort<I> input, InputPort<O> output, InputPort<I> discarded) {
+        this.input = input;
+        this.output = output;
+        this.discarded = discarded;
+    }
+
+    private OutputPort<I> input;
     @SuppressWarnings("unchecked")
-    private InputPort<S> output, discarded = DummyInputPort.INSTANCE;
-    private OutputPort<S> input;
+    private InputPort<O> output = DummyInputPort.INSTANCE;
+    @SuppressWarnings("unchecked")
+    private InputPort<I> discarded = DummyInputPort.INSTANCE;
 
     protected int numberOfThreads = Runtime.getRuntime().availableProcessors();
 
-    protected abstract OutputPort<S> prepareProcessor();
+    protected abstract OutputPort<O> prepareProcessor(OutputPort<I> input, InputPort<I> discarded);
 
     protected abstract void reportProgress();
 
+    @SuppressWarnings("unchecked")
     public void run() throws InterruptedException {
-        if (input instanceof Merger) {
-            ((Merger) input).start();
+        if (input == null) {
+            throw new RuntimeException("Input not set.");
         }
 
-        OutputPort<S> processorResults = prepareProcessor();
+        // Ensure thread-safety & performance
+        final Merger<I> bufferedInput;
+
+        if (input instanceof Merger) {
+            bufferedInput = (Merger) input;
+        } else {
+            bufferedInput = new Merger<>(INPUT_BUFFER_SIZE);
+            bufferedInput.merge(input);
+        }
+
+        bufferedInput.start();
+
+        final OutputPort<O> processorResults = prepareProcessor(bufferedInput, discarded);
 
         Thread reporter = new Thread(() -> {
             try {
@@ -50,44 +74,28 @@ public abstract class PipelineBlock<S extends SequenceRead> {
         reporter.interrupt();
     }
 
-    public void setOutput(SequenceWriter<S> writer) {
-        this.output = new SequenceWriterWrapper<>(writer);
+    public void setInput(OutputPort<I> input) {
+        this.input = input;
     }
 
-    public void setOutput(InputPort<S> output) {
+    public void setOutput(InputPort<O> output) {
         this.output = output;
     }
 
-    public void setDiscarded(InputPort<S> discarded) {
+    public void setDiscarded(InputPort<I> discarded) {
         this.discarded = discarded;
     }
 
-    public void setDiscarded(SequenceWriter<S> writer) {
-        this.discarded = new SequenceWriterWrapper<>(writer);
+    public OutputPort<I> getInput() {
+        return input;
     }
 
-    public void setInput(OutputPort<S> input) {
-        if (input instanceof SequenceReader) {
-            Merger<S> bufferedInput = new Merger<>(INPUT_BUFFER_SIZE);
-            bufferedInput.merge(input);
-            this.input = bufferedInput;
-        } else {
-            this.input = input;
-        }
-    }
-
-
-
-    public InputPort<S> getOutput() {
+    public InputPort<O> getOutput() {
         return output;
     }
 
-    public InputPort<S> getDiscarded() {
+    public InputPort<I> getDiscarded() {
         return discarded;
-    }
-
-    public OutputPort<S> getInput() {
-        return input;
     }
 
     public int getNumberOfThreads() {
