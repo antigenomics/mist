@@ -20,7 +20,8 @@ import com.milaboratory.mitools.cli.JCommanderBasedMain;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-        JCommanderBasedMain main = new JCommanderBasedMain("mist"
+        JCommanderBasedMain main = new JCommanderBasedMain("mist",
+                new PreprocessAction()
         ); // todo
         main.main(args);
     }

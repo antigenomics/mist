@@ -1,110 +1,137 @@
 package com.antigenomics.mist.cli;
 
+import cc.redberry.pipe.InputPort;
+import com.antigenomics.mist.preprocess.*;
+import com.antigenomics.mist.primer.PrimerSearcherArray;
 import com.beust.jcommander.Parameter;
+import com.beust.jcommander.ParameterException;
 import com.beust.jcommander.Parameters;
+import com.beust.jcommander.validators.PositiveInteger;
+import com.milaboratory.core.io.sequence.SequenceRead;
+import com.milaboratory.core.io.sequence.SequenceReader;
+import com.milaboratory.core.io.sequence.fastq.PairedFastqReader;
+import com.milaboratory.core.io.sequence.fastq.SingleFastqReader;
 import com.milaboratory.mitools.cli.Action;
 import com.milaboratory.mitools.cli.ActionHelper;
 import com.milaboratory.mitools.cli.ActionParameters;
-import com.milaboratory.mitools.cli.MiCLIUtil;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
 public class PreprocessAction implements Action {
+    final PreprocessParameters actionParameters = new PreprocessParameters();
+
+    // TODO: ensure output dir implementation
+
+    @SuppressWarnings("unchecked")
     @Override
     public void go(ActionHelper helper) throws Exception {
+        // TODO: Currently wildcard replacement is implemented in ReadWrapperFactory class
+        SequenceReader reader;
+        ReadGroomer readGroomer;
 
+        if (actionParameters.isPaired()) {
+            reader = new PairedFastqReader(actionParameters.arguments.get(1),
+                    actionParameters.arguments.get(2), false);
+            readGroomer = new PairedReadGroomer(!actionParameters.noTrim);
+        } else {
+
+            reader = new SingleFastqReader(actionParameters.arguments.get(0), false);
+            readGroomer = new SingleReadGroomer(!actionParameters.noTrim);
+        }
+
+        PrimerSearcherArray primerSearcherArray = null; // TODO
+
+        PreprocessorPipeline preprocessorPipeline = new PreprocessorPipeline(
+                new SearchProcessor(new ReadWrapperFactory(!actionParameters.sameStrand),
+                        primerSearcherArray),
+                readGroomer
+        );
+
+        preprocessorPipeline.setInput(reader);
+
+        if (actionParameters.discardedPrefix != null) {
+            InputPort<SequenceRead> discardedPort = parseDiscarded();
+            MistCLIUtil.ensureDirExtists(actionParameters.discardedPrefix);
+            preprocessorPipeline.setDiscarded(discardedPort);
+        }
+
+        MistCLIUtil.ensureDirExtists(actionParameters.outputPrefix);
+        preprocessorPipeline.setOutput(parseOutput());
+
+        preprocessorPipeline.setNumberOfThreads(actionParameters.threads);
+
+        preprocessorPipeline.run();
+
+        if (actionParameters.logFileName != null) {
+            PrintWriter printWriter = new PrintWriter(actionParameters.logFileName);
+            printWriter.write(preprocessorPipeline.toString());
+            printWriter.close();
+        }
+    }
+
+    private InputPort<SequenceRead> parseDiscarded() {
+        throw new NotImplementedException();
+    }
+
+    private InputPort<SequenceRead> parseOutput() {
+        throw new NotImplementedException();
     }
 
     @Override
     public String command() {
-        return null;
+        return "preprocess";
     }
 
     @Override
     public ActionParameters params() {
-        return null;
+        return actionParameters;
     }
 
     @Parameters(commandDescription = ".", optionPrefixes = "-")
-    public static final class MergingParameters extends ActionParameters {
-        @Parameter(description = "input_file_R1.fastq[.gz] input_file_R2.fastq[.gz] -|output_file.fastq[.gz]", variableArity = true)
-        public List<String> parameters = new ArrayList<>();
+    public static final class PreprocessParameters extends ActionParameters {
+        @Parameter(description = "config.json input_file_R1.fastq[.gz] [input_file_R2.fastq[.gz]]",
+                variableArity = true)
+        public List<String> arguments = new ArrayList<>();
 
-        @Parameter(description = "FASTQ file to put non-overlapped forward reads (supported formats: " +
-                "*.fastq and *.fastq.gz).",
-                names = {"-nf", "--negative-forward"},
-                converter = MiCLIUtil.FileConverter.class)
-        File forwardNegative;
+        @Parameter(description = "Store log to specified file name.",
+                names = {"-l", "--log"})
+        String logFileName;
 
-        @Parameter(description = "FASTQ file to put non-overlapped reverse reads (supported formats: " +
-                "*.fastq and *.fastq.gz).",
-                names = {"-nr", "--negative-reverse"},
-                converter = MiCLIUtil.FileConverter.class)
-        File reverseNegative;
+        @Parameter(description = "Prefix for output files.",
+                names = {"-o", "--output-prefix"})
+        String outputPrefix = "mist_pre";
 
-        @Parameter(description = "Report file.",
-                names = {"-r", "--report"})
-        String report;
+        @Parameter(description = "Store discarded reads to FASTQ files with a specified prefix.",
+                names = {"-d", "--discarded"})
+        String discardedPrefix;
 
-        //@Parameter(description = "Output FASTQ file or \"-\" for STDOUT to put non-overlapped " +
-        //        "reverse reads (supported formats: *.fastq and *.fastq.gz).",
-        //        names = {"-o", "--out"},
-        //        required = true)
-        //String output;
+        @Parameter(description = "Compress output files.",
+                names = {"-c", "--compress-output"})
+        boolean compress;
 
-        @Parameter(description = "Include both paired-end reads for pairs where no overlap was found.",
-                names = {"-i", "--include-non-overlapped"})
-        boolean includeNonOverlapped;
-
-        @Parameter(description = "Discard original sequence header and put sequential ids.",
-                names = {"-d", "--discard-header"})
-        boolean discardHeader;
-
-        @Parameter(description = "Assume that reads are on the same strand (opposite of raw Illumina reads orientation).",
+        @Parameter(description = "Assume that reads are on the same strand " +
+                "(opposite of raw Illumina reads orientation).",
                 names = {"-ss", "--same-strand"})
         boolean sameStrand;
 
-        @Parameter(description = "Possible values: 'max' - take maximal score value in letter conflicts, 'sub' - " +
-                "subtract minimal quality from maximal",
-                names = {"-q", "--quality-merging-algorithm"})
-        String qualityMergingAlgorithm = QualityMergingAlgorithm.SumSubtraction.cliName;
+        @Parameter(description = "Do not trim primer and/or UMI sequences.",
+                names = {"-nt", "--no-trim"})
+        boolean noTrim;
 
-        @Parameter(description = "Minimal overlap.",
-                names = {"-p", "--overlap"}, validateWith = PositiveInteger.class)
-        int overlap = 15;
-
-        @Parameter(description = "Minimal allowed similarity",
-                names = {"-s", "--similarity"})
-        double similarity = 0.85;
-
-        @Parameter(description = "Maximal quality to set for letters within overlap.",
-                names = {"-m", "--max-quality"})
-        int maxQuality = MergerParameters.DEFAULT_MAX_QUALITY_VALUE;
-
-        @Parameter(description = "Threads",
+        @Parameter(description = "Number of threads.",
                 names = {"-t", "--threads"}, validateWith = PositiveInteger.class)
         int threads = Math.min(Runtime.getRuntime().availableProcessors(), 4);
 
-        public String getR1() {
-            return parameters.get(0);
-        }
-
-        public String getR2() {
-            return parameters.get(1);
-        }
-
-        public String getOutput() {
-            return parameters.size() == 2 ? "-" : parameters.get(2);
-        }
-
-        public QualityMergingAlgorithm getQualityMergingAlgorithm() {
-            return QualityMergingAlgorithm.getFromCLIName(qualityMergingAlgorithm);
+        public boolean isPaired() {
+            return arguments.size() == 3;
         }
 
         @Override
         public void validate() {
-            if (parameters.size() > 3 || parameters.size() < 2)
+            if (arguments.size() > 3 || arguments.size() < 2)
                 throw new ParameterException("Wrong number of parameters.");
         }
     }
