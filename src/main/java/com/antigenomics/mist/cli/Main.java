@@ -16,6 +16,8 @@
 
 package com.antigenomics.mist.cli;
 
+import com.milaboratory.mitools.cli.JCommanderBasedMain;
+
 public class Main {
     public static void main(String[] args) throws Exception {
         JCommanderBasedMain main = new JCommanderBasedMain("mist"
