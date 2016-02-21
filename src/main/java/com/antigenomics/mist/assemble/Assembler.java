@@ -154,7 +154,8 @@ public abstract class Assembler<T extends SequenceRead> implements Processor<Mig
 
             // Check if we want to keep a given read
 
-            if (alignmentSize >= minAlignmentSize && mismatches / (float) alignmentSize >= minSimilarity) {
+            if (alignmentSize >= minAlignmentSize &&
+                    (1.0 - mismatches / (float) alignmentSize) >= minSimilarity) {
                 assembledReads.add(read);
                 quality = qualityTemp;
             } else {

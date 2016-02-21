@@ -108,6 +108,10 @@ public class UmiCoverageStatistics implements InputPort<UmiCoverageAndQuality> {
     }
 
     public PoissonLogNormalEM.PoissonLogNormalModel getWeightedDensityModel() {
+        if (weightedDensityModel == null) {
+            throw new RuntimeException("Statistics were not summarized. " +
+                    "Either close the port with putting a 'null', or call 'summarize()' explicitly.");
+        }
         return weightedDensityModel;
     }
 

@@ -45,6 +45,7 @@ public class UmiStatsTest {
 
             UmiCoverageStatistics coverageStats = syntheticUmiReadout.getUmiCoverageStatistics();
 
+
             System.out.println(coverageStats.getThresholdEstimate());
 
             Assert.assertTrue(coverageStats.getModelThresholdEstimate() < 0);

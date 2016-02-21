@@ -63,6 +63,8 @@ public class SyntheticUmiReadout {
             umiCoverageStatistics.put(umiCoverageAndQuality);
             umiErrorAndDiversityModel.put(umiCoverageAndQuality);
         }
+
+        umiCoverageStatistics.summarize();
     }
 
     public int getNumberOfUmis() {
