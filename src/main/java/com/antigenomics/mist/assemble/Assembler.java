@@ -33,6 +33,9 @@ public abstract class Assembler<T extends SequenceRead> implements Processor<Mig
     private final float minSimilarity, maxDiscardedReadsRatio;
     private final int minAlignmentSize, maxAssemblePasses;
 
+    public Assembler() {
+        this(0.8f, 30, 0.7f, 3);
+    }
 
     public Assembler(float minSimilarity, int minAlignmentSize, float maxDiscardedReadsRatio, int maxAssemblePasses) {
         // todo: check argument ranges
@@ -48,7 +51,7 @@ public abstract class Assembler<T extends SequenceRead> implements Processor<Mig
         AssemblyPassResult previousResult = null;
 
         for (int i = 0; i < maxAssemblePasses; i++) {
-            AssemblyPassResult result = assemble1(previousResult != null ? previousResult.discardedReads : reads,
+            AssemblyPassResult result = assemblePass(previousResult != null ? previousResult.discardedReads : reads,
                     index);
 
             if (result != null && result.isGood()) {
@@ -62,7 +65,11 @@ public abstract class Assembler<T extends SequenceRead> implements Processor<Mig
         return results;
     }
 
-    private AssemblyPassResult assemble1(List<T> reads, int index) {
+    protected AssemblyPassResult assemblePass(List<T> reads) {
+        return assemblePass(reads, 0);
+    }
+
+    protected AssemblyPassResult assemblePass(List<T> reads, int index) {
         if (reads.isEmpty()) {
             return null;
         }

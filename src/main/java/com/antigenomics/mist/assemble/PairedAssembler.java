@@ -10,6 +10,10 @@ import java.util.Set;
 public class PairedAssembler extends Assembler<PairedRead> {
     private final float minOverlapRatio;
 
+    public PairedAssembler(float minOverlapRatio) {
+        this.minOverlapRatio = minOverlapRatio;
+    }
+
     public PairedAssembler(float minSimilarity, int minAlignmentSize,
                            float maxDiscardedReadsRatio, int maxAssemblePasses,
                            float minOverlapRatio) {

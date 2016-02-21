@@ -22,6 +22,11 @@ public class ReadGenerator {
         this.rnd = new Random(seed);
     }
 
+    public NSequenceWithQuality randomRead(int length, byte meanQual) {
+        return new NSequenceWithQuality(randomSequence(length),
+                randomQuality(length, meanQual));
+    }
+
     public NucleotideSequence randomSequence(int length) {
         byte[] data = new byte[length];
 
@@ -32,10 +37,10 @@ public class ReadGenerator {
         return new NucleotideSequence(data);
     }
 
-    public SequenceQuality randomQuality(int length, byte mean) {
+    public SequenceQuality randomQuality(int length, byte meanQual) {
         byte[] qual = new byte[length];
         PoissonDistribution poissonDistribution = new PoissonDistribution(randomGenerator,
-                Math.max(1, 40 - mean), PoissonDistribution.DEFAULT_EPSILON, PoissonDistribution.DEFAULT_MAX_ITERATIONS);
+                Math.max(1, 40 - meanQual), PoissonDistribution.DEFAULT_EPSILON, PoissonDistribution.DEFAULT_MAX_ITERATIONS);
 
         for (int i = 0; i < length; i++) {
             qual[i] = (byte) Math.min(Math.max(2, 40 - poissonDistribution.sample()), 40);

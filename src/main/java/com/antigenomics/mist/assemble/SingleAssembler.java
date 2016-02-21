@@ -7,6 +7,9 @@ import java.util.HashSet;
 import java.util.List;
 
 public class SingleAssembler extends Assembler<SingleRead> {
+    public SingleAssembler() {
+    }
+
     public SingleAssembler(float minSimilarity, int minAlignmentSize, float maxDiscardedReadsRatio, int maxAssemblePasses) {
         super(minSimilarity, minAlignmentSize, maxDiscardedReadsRatio, maxAssemblePasses);
     }
