@@ -16,8 +16,8 @@ public class PairedAssembler extends Assembler<PairedRead> {
 
     public PairedAssembler(float minSimilarity, int minAlignmentSize,
                            float maxDiscardedReadsRatio, int maxAssemblePasses,
-                           float minOverlapRatio) {
-        super(minSimilarity, minAlignmentSize, maxDiscardedReadsRatio, maxAssemblePasses);
+                           boolean longIndelProne, float minOverlapRatio) {
+        super(minSimilarity, minAlignmentSize, maxDiscardedReadsRatio, maxAssemblePasses, longIndelProne);
         this.minOverlapRatio = minOverlapRatio;
     }
 

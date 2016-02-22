@@ -31,7 +31,7 @@ public class CorrectionBenchmarkTest {
 
                 if (covStats.getCorrectedErrors() > 0) {
                     Assert.assertTrue(covStats.getFalsePositiveRate() > 1.5 * treeStats.getFalsePositiveRate());
-                    Assert.assertTrue(Math.abs(covStats.getTruePositiveRate() - treeStats.getTruePositiveRate()) < 0.07);
+                    Assert.assertTrue(Math.abs(covStats.getTruePositiveRate() - treeStats.getTruePositiveRate()) < 0.05);
                 } else {
                     // Coverage-based fails
                     Assert.assertTrue(treeStats.getFalsePositiveRate() < 0.01);
@@ -40,4 +40,6 @@ public class CorrectionBenchmarkTest {
             }
         }
     }
+
+    // TODO: multi-peak tests
 }

@@ -10,8 +10,10 @@ public class SingleAssembler extends Assembler<SingleRead> {
     public SingleAssembler() {
     }
 
-    public SingleAssembler(float minSimilarity, int minAlignmentSize, float maxDiscardedReadsRatio, int maxAssemblePasses) {
-        super(minSimilarity, minAlignmentSize, maxDiscardedReadsRatio, maxAssemblePasses);
+    public SingleAssembler(float minSimilarity, int minAlignmentSize,
+                           float maxDiscardedReadsRatio, int maxAssemblePasses,
+                           boolean longIndelProne) {
+        super(minSimilarity, minAlignmentSize, maxDiscardedReadsRatio, maxAssemblePasses, longIndelProne);
     }
 
     @Override

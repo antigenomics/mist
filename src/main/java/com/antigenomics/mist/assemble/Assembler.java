@@ -19,6 +19,7 @@ import cc.redberry.pipe.Processor;
 import com.milaboratory.core.alignment.AffineGapAlignmentScoring;
 import com.milaboratory.core.alignment.Aligner;
 import com.milaboratory.core.alignment.Alignment;
+import com.milaboratory.core.alignment.LinearGapAlignmentScoring;
 import com.milaboratory.core.io.sequence.SequenceRead;
 import com.milaboratory.core.sequence.NSequenceWithQuality;
 import com.milaboratory.core.sequence.NucleotideSequence;
@@ -32,17 +33,21 @@ public abstract class Assembler<T extends SequenceRead> implements Processor<Mig
 
     private final float minSimilarity, maxDiscardedReadsRatio;
     private final int minAlignmentSize, maxAssemblePasses;
+    private final boolean longIndelProne;
 
     public Assembler() {
-        this(0.8f, 30, 0.7f, 3);
+        this(0.8f, 30, 0.6f, 3, false);
     }
 
-    public Assembler(float minSimilarity, int minAlignmentSize, float maxDiscardedReadsRatio, int maxAssemblePasses) {
+    public Assembler(float minSimilarity, int minAlignmentSize,
+                     float maxDiscardedReadsRatio, int maxAssemblePasses,
+                     boolean longIndelProne) {
         // todo: check argument ranges
         this.minSimilarity = minSimilarity;
         this.minAlignmentSize = minAlignmentSize;
         this.maxDiscardedReadsRatio = maxDiscardedReadsRatio;
         this.maxAssemblePasses = maxAssemblePasses;
+        this.longIndelProne = longIndelProne;
     }
 
     protected List<AssemblyPassResult> assemble(List<T> reads, int index) {
@@ -94,34 +99,33 @@ public abstract class Assembler<T extends SequenceRead> implements Processor<Mig
                 discardedReads = new ArrayList<>();
 
         for (T read : reads) {
-            NSequenceWithQuality nsq = read.getRead(index).getData();
+            NSequenceWithQuality readNsq = read.getRead(index).getData();
             int[] qualityTemp = new int[consensusSequence.size()];
             int mismatches = 0, consequentMismatches = 0;
 
             // Try to align without indels and update quality
 
-            int offset = index > 0 ? (size - nsq.size()) : 0; // anchor left/right
-            for (int i = 0; i < nsq.size(); i++) {
-                if (consensusSequence.codeAt(offset + i) == nsq.getSequence().codeAt(i)) {
+            int offset = index > 0 ? (size - readNsq.size()) : 0; // anchor left/right
+            for (int i = 0; i < readNsq.size(); i++) {
+                if (consensusSequence.codeAt(offset + i) == readNsq.getSequence().codeAt(i)) {
                     consequentMismatches = 0;
-                    qualityTemp[i] = computeQualityMatch(quality[i], nsq.getQuality().value(i));
+                    qualityTemp[i] = computeQualityMatch(quality[i], readNsq.getQuality().value(i));
                 } else {
                     mismatches++;
                     if (++consequentMismatches == MAX_CONSEQUENT_MISMATCHES) {
                         break; // apparently, we've got some indels
                     }
-                    qualityTemp[i] = computeQualityMismatch(quality[i], nsq.getQuality().value(i));
+                    qualityTemp[i] = computeQualityMismatch(quality[i], readNsq.getQuality().value(i));
                 }
             }
 
             int alignmentSize;
 
             // Handle indels appropriately
-
             if (consequentMismatches == MAX_CONSEQUENT_MISMATCHES) {
-                // Seems we have indels here.. try local alignment
-                Alignment alignment = Aligner.alignLocalAffine(AffineGapAlignmentScoring.getNucleotideBLASTScoring(),
-                        nsq.getSequence(), consensusSequence);
+                // Seems we have indels here.. or just bad read.. try local alignment
+                // We assume indels are mostly sequencing errors, so they are not expected to be really large
+                Alignment alignment = align(readNsq.getSequence(), consensusSequence);
 
                 // Cleanup
                 mismatches = 0;
@@ -129,27 +133,31 @@ public abstract class Assembler<T extends SequenceRead> implements Processor<Mig
 
                 // Traverse through aligned positions
                 int prevPosInCons = Integer.MIN_VALUE;
+                int matches = 0;
                 for (int pos = alignment.getSequence1Range().getFrom();
                      pos < alignment.getSequence1Range().getTo(); pos++) {
                     int posInCons = alignment.convertPosition(pos);
 
                     if (posInCons >= 0) {
-                        if (nsq.getSequence().codeAt(pos) == consensusSequence.codeAt(posInCons)) {
+                        if (readNsq.getSequence().codeAt(pos) == consensusSequence.codeAt(posInCons)) {
+                            matches++;
                             qualityTemp[posInCons] = computeQualityMatch(quality[posInCons],
-                                    nsq.getQuality().value(pos));
-                        } else if (posInCons == prevPosInCons) { // count insertions only once
-                            mismatches++;
-                            qualityTemp[posInCons] = computeQualityMismatch(quality[posInCons],
-                                    nsq.getQuality().value(pos));
+                                    readNsq.getQuality().value(pos));
+                        } else {
+                            if (posInCons != prevPosInCons) { // count insertions only once
+                                qualityTemp[posInCons] = computeQualityMismatch(quality[posInCons],
+                                        readNsq.getQuality().value(pos));
+                            }
                         }
-                    } else if (posInCons == prevPosInCons) { // count deletions only once
-                        mismatches++;
                     }
+
                     prevPosInCons = posInCons;
                 }
+
+                mismatches = readNsq.size() - matches;
                 alignmentSize = alignment.getSequence1Range().length();
             } else {
-                alignmentSize = nsq.size();
+                alignmentSize = readNsq.size();
             }
 
             // Check if we want to keep a given read
@@ -170,6 +178,15 @@ public abstract class Assembler<T extends SequenceRead> implements Processor<Mig
 
         return new AssemblyPassResult(assembledReads, discardedReads,
                 new NSequenceWithQuality(consensusSequence, new SequenceQuality(qualityBytes)));
+    }
+
+    private Alignment align(NucleotideSequence read, NucleotideSequence consensus) {
+        return longIndelProne ? Aligner.alignLocalAffine(
+                AffineGapAlignmentScoring.getNucleotideBLASTScoring(),
+                read, consensus) :
+                Aligner.alignLocalLinear(
+                        LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
+                        read, consensus);
     }
 
     private static int computeQualityMatch(int q1, byte q2) {

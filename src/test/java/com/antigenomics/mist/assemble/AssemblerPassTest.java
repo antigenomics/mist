@@ -56,8 +56,6 @@ public class AssemblerPassTest {
             }
         }
 
-        System.out.println(falsePositive);
-
         Assert.assertTrue(falsePositive / (float) total == 0);
     }
 
