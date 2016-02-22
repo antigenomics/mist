@@ -45,12 +45,18 @@ public class UmiStatsTest {
 
             UmiCoverageStatistics coverageStats = syntheticUmiReadout.getUmiCoverageStatistics();
 
-
-            System.out.println(coverageStats.getThresholdEstimate());
-
-            Assert.assertTrue(coverageStats.getModelThresholdEstimate() < 0);
-            Assert.assertTrue(coverageStats.getThresholdEstimate() == 1.0);
+            Assert.assertTrue(coverageStats.getThresholdEstimate() == 0);
         }
+    }
+
+    @Test
+    public void negativeThresholdTest2() {
+        SyntheticUmiReadout syntheticUmiReadout = new SyntheticUmiReadout(1000,
+                12, (byte) 10, 3, 0.5);
+
+        UmiCoverageStatistics coverageStats = syntheticUmiReadout.getUmiCoverageStatistics();
+
+        Assert.assertTrue(coverageStats.getModelThresholdEstimate() < 0);
     }
 
     @Test

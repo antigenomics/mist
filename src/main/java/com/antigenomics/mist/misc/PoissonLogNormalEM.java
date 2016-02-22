@@ -3,6 +3,7 @@ package com.antigenomics.mist.misc;
 import com.antigenomics.mist.umi.UmiCoverageStatistics;
 import org.apache.commons.math3.distribution.LogNormalDistribution;
 import org.apache.commons.math3.distribution.PoissonDistribution;
+import org.apache.commons.math3.exception.MathInternalError;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -106,21 +107,29 @@ public class PoissonLogNormalEM {
 
     private static double solveLambda(double K, double T) {
         int nIter = 100;
-        double tol = 0.001;
-        double x = 1.0;
+        double atol = 1e-3, eps = 1e-14;
+        double x0 = 1.0, x1 = x0;
+        boolean found = false;
 
-        // Newton - Rhapson variation
+        // Newton - Rhapson like solver
         for (int i = 0; i < nIter; i++) {
-            double f = f(x, T, K), df = df(x, T), ddf = ddf(x);
-            double xprev = x;
-            x += 0.5 * ddf * f * f / df / df / df - f / df;
+            double f = f(x0, T, K), df = df(x0, T);
 
-            if (!Double.isFinite(x) || Math.abs(x - xprev) < tol) {
+            if (Math.abs(df) < eps) {
                 break;
             }
+
+            x1 = x0 - f / df;
+
+            if (Math.abs(x1 - x0) < atol) {
+                found = true;
+                break;
+            }
+
+            x0 = x1;
         }
 
-        return Double.isFinite(x) ? Math.exp(-x) : 0;
+        return found ? Math.exp(-x1) : 0.0;
     }
 
     private static double f(double x, double T, double K) {
@@ -207,10 +216,15 @@ public class PoissonLogNormalEM {
         }
 
         public int estimateThreshold(double falsePositiveThreshold, double falseNegativeThreshold) {
-            int fpX = poissonDistribution.inverseCumulativeProbability(Math.min(1.0,
-                    1.0 - falsePositiveThreshold +
-                            logNormalPrior * logNormalDistribution.cumulativeProbability(1))), // missing density
-                    fnX = (int) logNormalDistribution.inverseCumulativeProbability(falseNegativeThreshold);
+            int fpX, fnX;
+            try {
+                fpX = poissonDistribution.inverseCumulativeProbability(Math.min(1.0,
+                        1.0 - falsePositiveThreshold +
+                                logNormalPrior * logNormalDistribution.cumulativeProbability(1))); // missing density
+                fnX = (int) logNormalDistribution.inverseCumulativeProbability(falseNegativeThreshold);
+            } catch (MathInternalError e) {
+                return -1;
+            }
 
             if (fpX > fnX) {
                 return -1;

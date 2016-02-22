@@ -73,7 +73,7 @@ public class UmiCoverageStatistics implements InputPort<UmiCoverageAndQuality> {
                 maxValue = weightedHistogram[i];
             }
         }
-        simpleThresholdEstimate = (int) Math.pow(2, indexOfMax / 2);
+        simpleThresholdEstimate = (int) Math.pow(2, indexOfMax / 2) - 1;
 
         // Compute poisson + log-normal density model
         weightedDensityModel = poissonLogNormalEM.run(simpleThresholdEstimate);

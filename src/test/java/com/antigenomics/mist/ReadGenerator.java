@@ -17,7 +17,7 @@ public class ReadGenerator {
         this(480011);
     }
 
-    public ReadGenerator(int seed) {
+    public ReadGenerator(long seed) {
         this.randomGenerator = new Well19937c(seed);
         this.rnd = new Random(seed);
     }

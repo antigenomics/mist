@@ -7,7 +7,7 @@ public class CorrectionBenchmarkTest {
     @Test
     public void compareCoverageAndTreeBasedCorrection() throws InterruptedException {
         byte[] qualityValues = new byte[]{(byte) 25, (byte) 30, (byte) 35};
-        double[] peakPositionValues = new double[]{3.0, 4.0, 5.0, 6.0};
+        double[] peakPositionValues = new double[]{2.0, 4.0, 6.0};
 
         int i = 0;
         for (byte quality : qualityValues) {
@@ -25,12 +25,18 @@ public class CorrectionBenchmarkTest {
                 CorrectionBenchmarkStatistics covStats = coverageBenchmark.run(),
                         treeStats = treeBenchmark.run();
 
-                Assert.assertTrue(covStats.getFalsePositiveRate() > 2 * treeStats.getFalsePositiveRate());
-                Assert.assertTrue(Math.abs(covStats.getTruePositiveRate() - treeStats.getTruePositiveRate()) < 0.07);
-
                 System.out.println("Coverage-based:" + covStats);
                 System.out.println("Tree-based:" + treeStats);
                 System.out.println();
+
+                if (covStats.getCorrectedErrors() > 0) {
+                    Assert.assertTrue(covStats.getFalsePositiveRate() > 1.5 * treeStats.getFalsePositiveRate());
+                    Assert.assertTrue(Math.abs(covStats.getTruePositiveRate() - treeStats.getTruePositiveRate()) < 0.07);
+                } else {
+                    // Coverage-based fails
+                    Assert.assertTrue(treeStats.getFalsePositiveRate() < 0.01);
+                    Assert.assertTrue(treeStats.getTruePositiveRate() > 0.80);
+                }
             }
         }
     }
