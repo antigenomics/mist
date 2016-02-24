@@ -78,4 +78,27 @@ public class PrimerSearcher {
     public boolean isReverseAllowed() {
         return reverseAllowed;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        PrimerSearcher that = (PrimerSearcher) o;
+
+        if (reverseAllowed != that.reverseAllowed) return false;
+        if (!primerId.equals(that.primerId)) return false;
+        if (!patternSearcherLeft.equals(that.patternSearcherLeft)) return false;
+        return patternSearcherRight.equals(that.patternSearcherRight);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = primerId.hashCode();
+        result = 31 * result + patternSearcherLeft.hashCode();
+        result = 31 * result + patternSearcherRight.hashCode();
+        result = 31 * result + (reverseAllowed ? 1 : 0);
+        return result;
+    }
 }

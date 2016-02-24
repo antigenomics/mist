@@ -27,4 +27,14 @@ public class DummyPatternSearcher implements PatternSearcher {
     public PatternSearchResult searchLast(NSequenceWithQuality read) {
         return PatternSearchResult.NO_SEARCH;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        return this == o || (o != null && getClass() == o.getClass());
+    }
+
+    @Override
+    public int hashCode() {
+        return 0;
+    }
 }
