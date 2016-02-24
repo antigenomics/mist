@@ -6,37 +6,41 @@ import com.antigenomics.mist.umi.UmiTag;
 import com.milaboratory.core.io.sequence.SingleRead;
 import com.milaboratory.core.io.sequence.SingleReadImpl;
 import com.milaboratory.core.sequence.NSequenceWithQuality;
+import org.apache.commons.math3.distribution.AbstractIntegerDistribution;
 import org.apache.commons.math3.distribution.NormalDistribution;
+import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.commons.math3.random.Well19937c;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 public class MigGenerator implements OutputPort<Mig<SingleRead>> {
-    private final int umiLength, readLength, maxTrim5, maxTrim3;
+    private final int umiLength, readLength;
     private final byte meanQual;
     private final ReadGenerator readGenerator;
     private final NormalDistribution norm;
-    private final Random rnd;
+    private final AbstractIntegerDistribution trim5Rng, trim3Rng;
 
-    public MigGenerator(int umiLength, int readLength, int maxTrim5, int maxTrim3, byte meanQual,
+    public MigGenerator(int umiLength, int readLength, double meanTrim5, double meanTrim3, byte meanQual,
                         double log2CoverageMean) {
-        this(umiLength, readLength, maxTrim5, maxTrim3, meanQual, log2CoverageMean, 1.0, 51102);
+        this(umiLength, readLength, meanTrim5, meanTrim3, meanQual, log2CoverageMean, 1.0, 51102);
     }
 
-    public MigGenerator(int umiLength, int readLength, int maxTrim5, int maxTrim3, byte meanQual,
+    public MigGenerator(int umiLength, int readLength, double meanTrim5, double meanTrim3, byte meanQual,
                         double log2CoverageMean,
                         double log2CoverageStd, int seed) {
         this.umiLength = umiLength;
         this.readLength = readLength;
-        this.maxTrim5 = maxTrim5;
-        this.maxTrim3 = maxTrim3;
         this.meanQual = meanQual;
         this.readGenerator = new ReadGenerator(seed);
         this.norm = new NormalDistribution(new Well19937c(seed),
                 log2CoverageMean, log2CoverageStd);
-        this.rnd = new Random(seed);
+        this.trim5Rng = meanTrim5 == 0 ? new DummyRandomGenerator() :
+                new PoissonDistribution(new Well19937c(seed), meanTrim5,
+                        PoissonDistribution.DEFAULT_EPSILON, PoissonDistribution.DEFAULT_MAX_ITERATIONS);
+        this.trim3Rng = meanTrim3 == 0 ? new DummyRandomGenerator() :
+                new PoissonDistribution(new Well19937c(seed), meanTrim3,
+                        PoissonDistribution.DEFAULT_EPSILON, PoissonDistribution.DEFAULT_MAX_ITERATIONS);
     }
 
     @Override
@@ -50,8 +54,8 @@ public class MigGenerator implements OutputPort<Mig<SingleRead>> {
         for (int i = 0; i < count; i++) {
             NSequenceWithQuality read = readGenerator.mutate(consensus);
 
-            int trim5 = rnd.nextInt(maxTrim5 + 1),
-                    trim3 = rnd.nextInt(maxTrim3 + 1);
+            int trim5 = trim5Rng.sample(),
+                    trim3 = trim3Rng.sample();
 
             reads.add(new SingleReadImpl(-1,
                     read.getRange(trim5, read.size() - trim3),
@@ -72,6 +76,52 @@ public class MigGenerator implements OutputPort<Mig<SingleRead>> {
 
         public NSequenceWithQuality getConsensus() {
             return consensus;
+        }
+    }
+
+    private class DummyRandomGenerator extends AbstractIntegerDistribution {
+        public DummyRandomGenerator() {
+            super(null);
+        }
+
+        @Override
+        public double probability(int x) {
+            return 0;
+        }
+
+        @Override
+        public double cumulativeProbability(int x) {
+            return 0;
+        }
+
+        @Override
+        public double getNumericalMean() {
+            return 0;
+        }
+
+        @Override
+        public double getNumericalVariance() {
+            return 0;
+        }
+
+        @Override
+        public int getSupportLowerBound() {
+            return 0;
+        }
+
+        @Override
+        public int getSupportUpperBound() {
+            return 0;
+        }
+
+        @Override
+        public boolean isSupportConnected() {
+            return false;
+        }
+
+        @Override
+        public int sample() {
+            return 0;
         }
     }
 }
