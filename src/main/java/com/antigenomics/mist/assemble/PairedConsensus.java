@@ -22,30 +22,30 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class PairedConsensus implements Consensus<PairedRead> {
-    private final SingleConsensus leftConsensus, rightConsensus;
+    private final SingleConsensus consensus1, consensus2;
     private final int clusterId;
     private final List<PairedRead> reads;
 
-    public PairedConsensus(SingleConsensus leftConsensus,
-                           SingleConsensus rightConsensus,
+    public PairedConsensus(SingleConsensus consensus1,
+                           SingleConsensus consensus2,
                            int clusterId) {
-        this.leftConsensus = leftConsensus;
-        this.rightConsensus = rightConsensus;
+        this.consensus1 = consensus1;
+        this.consensus2 = consensus2;
         this.clusterId = clusterId;
 
-        if (leftConsensus.size() < rightConsensus.size()) {
-            leftConsensus = rightConsensus;
-            rightConsensus = this.leftConsensus;
+        if (consensus1.size() < consensus2.size()) {
+            consensus1 = consensus2;
+            consensus2 = this.consensus1;
         }
 
-        this.reads = rightConsensus.reads.stream()
+        this.reads = consensus2.reads.stream()
                 .map(read -> (PairedRead) read)
-                .filter(leftConsensus.reads::contains)
+                .filter(consensus1.reads::contains)
                 .collect(Collectors.toList());
     }
 
     public float getOverlap() {
-        return reads.size() / (float) Math.min(leftConsensus.size(), rightConsensus.size());
+        return reads.size() / (float) Math.min(consensus1.size(), consensus2.size());
     }
 
     @Override
@@ -55,18 +55,26 @@ public class PairedConsensus implements Consensus<PairedRead> {
 
     @Override
     public int size(int index) {
-        return (index > 0 ? rightConsensus : leftConsensus).size();
+        return (index > 0 ? consensus2 : consensus1).size();
     }
 
     @Override
     public PairedRead asRead() {
-        return new PairedRead(leftConsensus.asRead(),
-                rightConsensus.asRead());
+        return new PairedRead(consensus1.asRead(),
+                consensus2.asRead());
+    }
+
+    public SingleConsensus getConsensus1() {
+        return consensus1;
+    }
+
+    public SingleConsensus getConsensus2() {
+        return consensus2;
     }
 
     @Override
     public UmiTag getUmiTag() {
-        return leftConsensus.getUmiTag();
+        return consensus1.getUmiTag();
     }
 
     @Override
