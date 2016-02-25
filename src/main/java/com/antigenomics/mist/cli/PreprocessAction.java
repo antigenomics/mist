@@ -1,6 +1,7 @@
 package com.antigenomics.mist.cli;
 
 import cc.redberry.pipe.InputPort;
+import com.antigenomics.mist.cli.barcodes.BarcodesParser;
 import com.antigenomics.mist.preprocess.*;
 import com.antigenomics.mist.primer.PrimerSearcherArray;
 import com.beust.jcommander.Parameter;
@@ -16,6 +17,7 @@ import com.milaboratory.mitools.cli.ActionHelper;
 import com.milaboratory.mitools.cli.ActionParameters;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import java.io.File;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,17 +34,33 @@ public class PreprocessAction implements Action {
         SequenceReader reader;
         ReadGroomer readGroomer;
 
+        if (!new File(actionParameters.getBarcodesFileName()).exists()) {
+            throw new RuntimeException("Barcodes file " + actionParameters.getBarcodesFileName() + " does not exist.");
+        }
+
+        PrimerSearcherArray primerSearcherArray;
+        try {
+            primerSearcherArray = BarcodesParser.read(actionParameters.getBarcodesFileName());
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to parse barcodes file.", e);
+        }
+
+        if (!new File(actionParameters.getR1FileName()).exists()) {
+            throw new RuntimeException("FASTQ file " + actionParameters.getR1FileName() + " does not exist.");
+        }
+
+        if (actionParameters.isPaired() && !new File(actionParameters.getR2FileName()).exists()) {
+            throw new RuntimeException("FASTQ file " + actionParameters.getR2FileName() + " does not exist.");
+        }
+
         if (actionParameters.isPaired()) {
             reader = new PairedFastqReader(actionParameters.arguments.get(1),
                     actionParameters.arguments.get(2), false);
             readGroomer = new PairedReadGroomer(!actionParameters.noTrim);
         } else {
-
-            reader = new SingleFastqReader(actionParameters.arguments.get(0), false);
+            reader = new SingleFastqReader(actionParameters.arguments.get(1), false);
             readGroomer = new SingleReadGroomer(!actionParameters.noTrim);
         }
-
-        PrimerSearcherArray primerSearcherArray = null; // TODO
 
         PreprocessorPipeline preprocessorPipeline = new PreprocessorPipeline(
                 new SearchProcessor(new ReadWrapperFactory(!actionParameters.sameStrand),
@@ -127,6 +145,21 @@ public class PreprocessAction implements Action {
 
         public boolean isPaired() {
             return arguments.size() == 3;
+        }
+
+        public String getBarcodesFileName() {
+            return arguments.get(0);
+        }
+
+        public String getR1FileName() {
+            return arguments.get(1);
+        }
+
+        public String getR2FileName() {
+            if (!isPaired()) {
+                throw new NotImplementedException();
+            }
+            return arguments.get(2);
         }
 
         @Override
