@@ -29,11 +29,16 @@ import java.util.concurrent.atomic.AtomicLong;
 public abstract class UmiCorrector<T extends SequenceRead> implements Processor<T, T> {
     protected final Map<String, CorrectorStatistics> correctorStatisticsBySample = new HashMap<>();
 
+    public static final int MAX_MISMATCHES_DEFAULT = 1, FILTER_DECISION_COVERAGE_THRESHOLD = 10;
+    public static final double DENSITY_MODEL_ERROR_TRESHOLD = 0.5,
+            ERROR_PVALUE_THRESHOLD = 0.05, INDEPENDENT_FDR_ASSEMBLY_THRESHOLD = 0.1;
+
     protected final int maxMismatches, filterDecisionCoverageThreshold;
     protected final double densityModelErrorThreshold, errorPvalueThreshold, independentAssemblyFdrThreshold;
 
     public UmiCorrector(OutputPort<UmiCoverageAndQuality> input) {
-        this(input, 10, 0.5, 1, 0.05, 0.1);
+        this(input, MAX_MISMATCHES_DEFAULT, DENSITY_MODEL_ERROR_TRESHOLD,
+                FILTER_DECISION_COVERAGE_THRESHOLD, ERROR_PVALUE_THRESHOLD, INDEPENDENT_FDR_ASSEMBLY_THRESHOLD);
     }
 
     public UmiCorrector(OutputPort<UmiCoverageAndQuality> input,
@@ -113,18 +118,18 @@ public abstract class UmiCorrector<T extends SequenceRead> implements Processor<
 
             int coverage = umiTree.get(umi).getCoverage();
 
-            if (useCoverageThresholding &&
-                    umiCoverageStatistics
-                            .getWeightedDensityModel()
-                            .computeCoverageFilteringProbability(coverage) >= densityModelErrorThreshold) {
-                coverageFilteredCounter.incrementAndGet();
-                return null;
-            }
-
             NucleotideSequence newUmi = umiTree.correct(umi);
 
             if (!newUmi.equals(umi)) {
+                // corrected
                 correctedCounter.incrementAndGet();
+            } else if (useCoverageThresholding &&
+                    umiCoverageStatistics
+                            .getWeightedDensityModel()
+                            .computeCoverageFilteringProbability(coverage) >= densityModelErrorThreshold) {
+                // try coverage thresholding
+                coverageFilteredCounter.incrementAndGet();
+                return null;
             }
 
             return newUmi;
