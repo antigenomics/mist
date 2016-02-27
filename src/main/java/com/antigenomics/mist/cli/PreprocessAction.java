@@ -1,9 +1,13 @@
 package com.antigenomics.mist.cli;
 
+import cc.redberry.pipe.CUtils;
 import cc.redberry.pipe.InputPort;
+import cc.redberry.pipe.OutputPort;
 import com.antigenomics.mist.cli.barcodes.BarcodesParser;
 import com.antigenomics.mist.preprocess.*;
 import com.antigenomics.mist.primer.PrimerSearcherArray;
+import com.antigenomics.mist.umi.UmiCoverageAndQuality;
+import com.antigenomics.mist.umi.UmiCoverageAndQualityWriter;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 import com.beust.jcommander.Parameters;
@@ -18,11 +22,17 @@ import com.milaboratory.mitools.cli.ActionParameters;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.antigenomics.mist.cli.MistCLIUtil.*;
+
 public class PreprocessAction implements Action {
+    public static final String OUTPUT_SUFFIX = "pre",
+            DISCARDED_SUFFIX = "pre" + SUFFIX_SEP + "bad";
+
     final PreprocessParameters actionParameters = new PreprocessParameters();
 
     // TODO: ensure output dir implementation
@@ -30,14 +40,6 @@ public class PreprocessAction implements Action {
     @SuppressWarnings("unchecked")
     @Override
     public void go(ActionHelper helper) throws Exception {
-        // TODO: Currently wildcard replacement is implemented in ReadWrapperFactory class
-        SequenceReader reader;
-        ReadGroomer readGroomer;
-
-        if (!new File(actionParameters.getBarcodesFileName()).exists()) {
-            throw new RuntimeException("Barcodes file " + actionParameters.getBarcodesFileName() + " does not exist.");
-        }
-
         PrimerSearcherArray primerSearcherArray;
         try {
             primerSearcherArray = BarcodesParser.read(actionParameters.getBarcodesFileName());
@@ -45,15 +47,11 @@ public class PreprocessAction implements Action {
             throw new RuntimeException("Unable to parse barcodes file.", e);
         }
 
-        if (!new File(actionParameters.getR1FileName()).exists()) {
-            throw new RuntimeException("FASTQ file " + actionParameters.getR1FileName() + " does not exist.");
-        }
-
-        if (actionParameters.isPaired() && !new File(actionParameters.getR2FileName()).exists()) {
-            throw new RuntimeException("FASTQ file " + actionParameters.getR2FileName() + " does not exist.");
-        }
-
+        SequenceReader reader;
+        ReadGroomer readGroomer;
         if (actionParameters.isPaired()) {
+            // TODO: Currently wildcard replacement is implemented in ReadWrapperFactory class
+            // so we set wildcards processing to false
             reader = new PairedFastqReader(actionParameters.arguments.get(1),
                     actionParameters.arguments.get(2), false);
             readGroomer = new PairedReadGroomer(!actionParameters.noTrim);
@@ -70,32 +68,39 @@ public class PreprocessAction implements Action {
 
         preprocessorPipeline.setInput(reader);
 
-        if (actionParameters.discardedPrefix != null) {
-            InputPort<SequenceRead> discardedPort = parseDiscarded();
-            MistCLIUtil.ensureDirExtists(actionParameters.discardedPrefix);
+        if (actionParameters.discardedPath != null) {
+            InputPort<SequenceRead> discardedPort = createAndWrapFastqWriter(actionParameters.discardedPath,
+                    DISCARDED_SUFFIX, actionParameters.isPaired(), actionParameters.compress);
             preprocessorPipeline.setDiscarded(discardedPort);
         }
 
         MistCLIUtil.ensureDirExtists(actionParameters.outputPrefix);
-        preprocessorPipeline.setOutput(parseOutput());
+        preprocessorPipeline.setOutput(createAndWrapFastqWriter(actionParameters.outputPrefix,
+                OUTPUT_SUFFIX, actionParameters.isPaired(), actionParameters.compress));
 
         preprocessorPipeline.setNumberOfThreads(actionParameters.threads);
 
         preprocessorPipeline.run();
 
-        if (actionParameters.logFileName != null) {
-            PrintWriter printWriter = new PrintWriter(actionParameters.logFileName);
-            printWriter.write(preprocessorPipeline.toString());
-            printWriter.close();
-        }
-    }
+        PrintWriter printWriter = new PrintWriter(updatePath(actionParameters.outputPrefix,
+                OUTPUT_SUFFIX + ".log"));
+        printWriter.write(preprocessorPipeline
+                .getSearchProcessor()
+                .getPrimerSearcherArray()
+                .toString());
+        printWriter.close();
 
-    private InputPort<SequenceRead> parseDiscarded() {
-        throw new NotImplementedException();
-    }
+        UmiCoverageAndQualityWriter umiCoverageAndQualityWriter = new UmiCoverageAndQualityWriter(
+                new FileOutputStream(updatePath(actionParameters.outputPrefix,
+                        OUTPUT_SUFFIX + "_umi.log"))
+        );
+        OutputPort<UmiCoverageAndQuality> umiCoverageAndQualityOutputPort = preprocessorPipeline
+                .getSearchProcessor()
+                .getUmiAccumulator()
+                .getOutputPort();
 
-    private InputPort<SequenceRead> parseOutput() {
-        throw new NotImplementedException();
+        CUtils.drain(umiCoverageAndQualityOutputPort,
+                umiCoverageAndQualityWriter);
     }
 
     @Override
@@ -114,17 +119,18 @@ public class PreprocessAction implements Action {
                 variableArity = true)
         public List<String> arguments = new ArrayList<>();
 
-        @Parameter(description = "Store log to specified file name.",
-                names = {"-l", "--log"})
-        String logFileName;
-
-        @Parameter(description = "Prefix for output files.",
+        @Parameter(description = "Output path (path can end with a prefix). " +
+                "Note that a mandatory '_" + OUTPUT_SUFFIX + "_R1[2].fastq[.gz]' suffix will be added to processed reads. " +
+                "Output will also include UMI sequence summary file with '_" + OUTPUT_SUFFIX + "_umi.txt' suffix and " +
+                "a log file with '_" + OUTPUT_SUFFIX + ".log' suffix.",
                 names = {"-o", "--output-prefix"})
-        String outputPrefix = "mist_pre";
+        String outputPrefix = ".";
 
-        @Parameter(description = "Store discarded reads to FASTQ files with a specified prefix.",
+        @Parameter(description = "Store discarded reads to FASTQ files in the specified path " +
+                "(path can end with a prefix). " +
+                "Note that a mandatory '_" + DISCARDED_SUFFIX + "_R1[2].fastq[.gz]' suffix will be added.",
                 names = {"-d", "--discarded"})
-        String discardedPrefix;
+        String discardedPath;
 
         @Parameter(description = "Compress output files.",
                 names = {"-c", "--compress-output"})
@@ -166,6 +172,18 @@ public class PreprocessAction implements Action {
         public void validate() {
             if (arguments.size() > 3 || arguments.size() < 2)
                 throw new ParameterException("Wrong number of parameters.");
+
+            if (!new File(getBarcodesFileName()).exists()) {
+                throw new RuntimeException("Barcodes file " + getBarcodesFileName() + " does not exist.");
+            }
+
+            if (!new File(getR1FileName()).exists()) {
+                throw new RuntimeException("FASTQ file " + getR1FileName() + " does not exist.");
+            }
+
+            if (isPaired() && !new File(getR2FileName()).exists()) {
+                throw new RuntimeException("FASTQ file " + getR2FileName() + " does not exist.");
+            }
         }
     }
 }

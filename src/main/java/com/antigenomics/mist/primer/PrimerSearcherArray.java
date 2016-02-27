@@ -123,4 +123,23 @@ public class PrimerSearcherArray {
     public List<PrimerSearcher> getPrimerSearchers() {
         return Collections.unmodifiableList(primerSearchers);
     }
+
+    @Override
+    public String toString() {
+        String result = "pattern_pair_index\tsample_id" +
+                "\tfirst_pattern_matches\tsecond_pattern_matches\tboth_pattern_matches" +
+                "\tfirst_pattern_matches_ratio" +
+                "\tpartial_pattern_matches_ratio\tfirst_pattern_partial_matches_ratio";
+
+        for (PrimerSearcherStats primerSearcherStats : getStats()) {
+            result += "\n" + primerSearcherStats.getLeftMatchCount() +
+                    "\t" + primerSearcherStats.getRightMatchCount() +
+                    "\t" + primerSearcherStats.getBothMatchCount() +
+                    "\t" + primerSearcherStats.getForwardMatchRatio() +
+                    "\t" + primerSearcherStats.getPartialMatchRatio() +
+                    "\t" + primerSearcherStats.getPartialMatchLeftAsymmetry();
+        }
+
+        return result;
+    }
 }

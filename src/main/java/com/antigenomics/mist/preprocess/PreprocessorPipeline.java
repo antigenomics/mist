@@ -55,4 +55,8 @@ public class PreprocessorPipeline<S extends SequenceRead> extends PipelineBlock<
                 searchProcessor.getMatchedReadsCount() + " matched, " +
                 (int) (100 * searchProcessor.getForwardOrientationRatio()) + "% forward orientation.");
     }
+
+    public SearchProcessor<S> getSearchProcessor() {
+        return searchProcessor;
+    }
 }
