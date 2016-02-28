@@ -78,4 +78,8 @@ public class SearchProcessor<T extends SequenceRead> implements Processor<T, Pri
     public UmiAccumulator getUmiAccumulator() {
         return umiAccumulator;
     }
+
+    public PrimerSearcherArray getPrimerSearcherArray() {
+        return primerSearcherArray;
+    }
 }

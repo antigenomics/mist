@@ -23,10 +23,12 @@ import java.util.List;
 
 public class StrictPatternMatcher implements PatternSearcher {
     private final int minOffset, maxOffset;
+    private final String patternStr;
     private final List<Integer> umiPositions;
     private final Motif<NucleotideSequence> pattern;
 
     public StrictPatternMatcher(int minOffset, int maxOffset, String pattern) {
+        this.patternStr = pattern;
         this.minOffset = minOffset;
         this.maxOffset = maxOffset;
         this.umiPositions = PatternSearcherUtil.extractUmiPositions(pattern);
@@ -101,5 +103,38 @@ public class StrictPatternMatcher implements PatternSearcher {
 
         return new PatternSearchResult(fromRead, posRead,
                 PatternSearcherUtil.extractUmi(umiPositions, read, fromRead - fromPattern));
+    }
+
+    public String getPatternStr() {
+        return patternStr;
+    }
+
+    public int getMaxOffset() {
+        return maxOffset;
+    }
+
+    public int getMinOffset() {
+        return minOffset;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        StrictPatternMatcher that = (StrictPatternMatcher) o;
+
+        if (minOffset != that.minOffset) return false;
+        if (maxOffset != that.maxOffset) return false;
+        return patternStr.equals(that.patternStr);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = minOffset;
+        result = 31 * result + maxOffset;
+        result = 31 * result + patternStr.hashCode();
+        return result;
     }
 }

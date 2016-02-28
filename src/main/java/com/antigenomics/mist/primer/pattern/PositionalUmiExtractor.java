@@ -38,4 +38,31 @@ public class PositionalUmiExtractor implements PatternSearcher {
     private PatternSearchResult search(NSequenceWithQuality read, int from, int to) {
         return new PatternSearchResult(from, to, read.getRange(from, to));
     }
+
+    public int getFrom() {
+        return from;
+    }
+
+    public int getTo() {
+        return to;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        PositionalUmiExtractor that = (PositionalUmiExtractor) o;
+
+        if (from != that.from) return false;
+        return to == that.to;
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = from;
+        result = 31 * result + to;
+        return result;
+    }
 }

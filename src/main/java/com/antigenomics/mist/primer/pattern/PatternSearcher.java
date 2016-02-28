@@ -17,6 +17,7 @@ package com.antigenomics.mist.primer.pattern;
 
 import com.milaboratory.core.sequence.NSequenceWithQuality;
 
+// todo: rename to UMI extractor
 public interface PatternSearcher {
     PatternSearchResult searchFirst(NSequenceWithQuality read);
 

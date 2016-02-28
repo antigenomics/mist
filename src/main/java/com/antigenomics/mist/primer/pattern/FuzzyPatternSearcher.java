@@ -28,8 +28,10 @@ public class FuzzyPatternSearcher implements PatternSearcher {
     private final BitapPattern pattern;
     private final List<Integer> seedPositions, umiPositions;
     private final int maxNumberOfErrors;
+    private final String patternStr;
 
     public FuzzyPatternSearcher(String pattern, int maxNumberOfErrors) {
+        this.patternStr = pattern;
         this.maxNumberOfErrors = maxNumberOfErrors;
         this.seedPositions = PatternSearcherUtil.extractSeedPositions(pattern);
         this.umiPositions = PatternSearcherUtil.extractUmiPositions(pattern);
@@ -71,5 +73,32 @@ public class FuzzyPatternSearcher implements PatternSearcher {
                     (byte) (Byte.MAX_VALUE * ((maxNumberOfErrors - numberOfErrors) / (float) maxNumberOfErrors))
             );
         }
+    }
+
+    public String getPatternStr() {
+        return patternStr;
+    }
+
+    public int getMaxNumberOfErrors() {
+        return maxNumberOfErrors;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        FuzzyPatternSearcher that = (FuzzyPatternSearcher) o;
+
+        if (maxNumberOfErrors != that.maxNumberOfErrors) return false;
+        return patternStr.equals(that.patternStr);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = maxNumberOfErrors;
+        result = 31 * result + patternStr.hashCode();
+        return result;
     }
 }
