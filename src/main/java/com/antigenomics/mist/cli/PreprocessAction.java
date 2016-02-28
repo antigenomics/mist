@@ -35,8 +35,6 @@ public class PreprocessAction implements Action {
 
     final PreprocessParameters actionParameters = new PreprocessParameters();
 
-    // TODO: ensure output dir implementation
-
     @SuppressWarnings("unchecked")
     @Override
     public void go(ActionHelper helper) throws Exception {

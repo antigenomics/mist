@@ -17,12 +17,16 @@
 package com.antigenomics.mist.cli;
 
 import com.milaboratory.mitools.cli.JCommanderBasedMain;
+import com.milaboratory.mitools.cli.MergeAction;
 
 public class Main {
     public static void main(String[] args) throws Exception {
         JCommanderBasedMain main = new JCommanderBasedMain("mist",
-                new PreprocessAction()
-        ); // todo
+                new PreprocessAction(),
+                new CorrectAction(),
+                new AssembleAction(),
+                new MergeAction()
+        );
         main.main(args);
     }
 }

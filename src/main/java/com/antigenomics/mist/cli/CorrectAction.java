@@ -29,9 +29,7 @@ public class CorrectAction implements Action {
     public static final String OUTPUT_SUFFIX = "cor",
             DISCARDED_SUFFIX = "cor" + SUFFIX_SEP + "bad";
 
-    final PreprocessParameters actionParameters = new PreprocessParameters();
-
-    // TODO: ensure output dir implementation
+    final CorrectorParameters actionParameters = new CorrectorParameters();
 
     @SuppressWarnings("unchecked")
     @Override
@@ -99,7 +97,7 @@ public class CorrectAction implements Action {
     }
 
     @Parameters(commandDescription = ".", optionPrefixes = "-")
-    public static final class PreprocessParameters extends ActionParameters {
+    public static final class CorrectorParameters extends ActionParameters {
         @Parameter(description = PreprocessAction.OUTPUT_SUFFIX + MistCLIUtil.SUFFIX_SEP + "umi.txt " +
                 PreprocessAction.OUTPUT_SUFFIX + MistCLIUtil.SUFFIX_SEP + "R1.fastq[.gz] " +
                 "[" + PreprocessAction.OUTPUT_SUFFIX + MistCLIUtil.SUFFIX_SEP + "R2.fastq[.gz]]",
@@ -138,7 +136,7 @@ public class CorrectAction implements Action {
 
         @Parameter(description = "Classifier probability threshold for filtering based on UMI coverage distribution.",
                 names = {"--coverage-classifier-threshold"}, validateWith = ProbabilityDouble.class)
-        double densityModelErrorThreshold = UmiCorrector.DENSITY_MODEL_ERROR_TRESHOLD;
+        double densityModelErrorThreshold = UmiCorrector.DENSITY_MODEL_ERROR_THRESHOLD;
 
         @Parameter(description = "Compress output files.",
                 names = {"-c", "--compress-output"})
